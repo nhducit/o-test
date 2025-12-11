@@ -499,26 +499,41 @@ export class StoryboardAndCopyPage {
   // ==================== Add Token Methods ====================
 
   /**
-   * Check if Add Token button is visible for a headline variant
+   * Check if Add Token button is visible in the headline section
+   * Now includes both default headline and variant inputs
    */
-  async isAddTokenButtonVisibleForHeadlineVariant(index: number): Promise<boolean> {
-    const variantFormItem = this.headlineSection.locator(
-      `.ant-form-item:has-text("Variation Headline ${index + 1}")`
-    )
-    const addTokenBtn = variantFormItem.getByTestId('add-token-btn')
+  async isAddTokenButtonVisibleInHeadlineSection(): Promise<boolean> {
+    const addTokenBtn = this.headlineSection.getByTestId('add-token-btn').first()
     return await addTokenBtn.isVisible().catch(() => {
       return false
     })
   }
 
   /**
+   * Click the Add Token button for the default headline (first Add Token button in headline section)
+   */
+  async clickAddTokenForDefaultHeadline(): Promise<void> {
+    const addTokenBtns = this.headlineSection.getByTestId('add-token-btn')
+    await addTokenBtns.first().click()
+  }
+
+  /**
    * Click the Add Token button for a headline variant
+   * Note: index 0 is now the default headline, variants start at index 1
    */
   async clickAddTokenForHeadlineVariant(index: number): Promise<void> {
-    const variantFormItem = this.headlineSection.locator(
-      `.ant-form-item:has-text("Variation Headline ${index + 1}")`
-    )
-    await variantFormItem.getByTestId('add-token-btn').click()
+    // Index 0 = default headline, index 1+ = variants
+    // So to click variant 0, we need to click the second Add Token button (index 1)
+    const addTokenBtns = this.headlineSection.getByTestId('add-token-btn')
+    await addTokenBtns.nth(index + 1).click()
+  }
+
+  /**
+   * Get count of Add Token buttons in headline section
+   */
+  async getAddTokenButtonCountInHeadlineSection(): Promise<number> {
+    const addTokenBtns = this.headlineSection.getByTestId('add-token-btn')
+    return await addTokenBtns.count()
   }
 
   /**
@@ -676,5 +691,225 @@ export class StoryboardAndCopyPage {
    */
   async clickRegenerateModalGenerate(): Promise<void> {
     await this.page.getByTestId('regenerate-modal-generate-btn').click()
+  }
+
+  // ==================== Campaign Style Settings Modal Methods ====================
+
+  /**
+   * Click the Configure Styles button to open the Campaign Style Settings modal
+   */
+  async clickConfigureStyles(): Promise<void> {
+    await this.page.getByTestId('configure-styles-btn').click()
+  }
+
+  /**
+   * Wait for Campaign Style Settings modal to be visible
+   */
+  async waitForStyleModal(): Promise<void> {
+    await expect(
+      this.page.getByRole('dialog', { name: 'Campaign Style Settings' })
+    ).toBeVisible({ timeout: 10000 })
+  }
+
+  /**
+   * Check if Campaign Style Settings modal is visible
+   */
+  async isStyleModalVisible(): Promise<boolean> {
+    const modal = this.page.getByRole('dialog', { name: 'Campaign Style Settings' })
+    return await modal.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Click Cancel button in Campaign Style Settings modal
+   */
+  async clickStyleModalCancel(): Promise<void> {
+    await this.page.getByTestId('campaign-style-modal-cancel-btn').click()
+  }
+
+  /**
+   * Click Save button in Campaign Style Settings modal
+   */
+  async clickStyleModalSave(): Promise<void> {
+    await this.page.getByTestId('campaign-style-modal-save-btn').click()
+  }
+
+  /**
+   * Check if Save button is enabled in Campaign Style Settings modal
+   */
+  async isStyleModalSaveEnabled(): Promise<boolean> {
+    return await this.page.getByTestId('campaign-style-modal-save-btn').isEnabled()
+  }
+
+  /**
+   * Check if a style section is visible in the modal
+   */
+  async isStyleSectionVisible(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<boolean> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    return await sectionLocator.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Check if a style section is expanded in the modal
+   */
+  async isStyleSectionExpanded(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<boolean> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const collapseItem = sectionLocator.locator('.ant-collapse-item')
+    const className = await collapseItem.getAttribute('class')
+    return className?.includes('ant-collapse-item-active') ?? false
+  }
+
+  /**
+   * Toggle (expand/collapse) a style section in the modal
+   */
+  async toggleStyleSection(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<void> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    // Click the expand/collapse icon button to toggle
+    const expandButton = sectionLocator.locator('.ant-collapse-expand-icon')
+    await expandButton.click()
+  }
+
+  /**
+   * Get the Font Size value from a style section
+   */
+  async getStyleSectionFontSize(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<string> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Font Size") input')
+    return (await input.inputValue()) || ''
+  }
+
+  /**
+   * Fill the Font Size value in a style section
+   */
+  async fillStyleSectionFontSize(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy',
+    value: string
+  ): Promise<void> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Font Size") input')
+    await input.fill(value)
+    await input.blur()
+  }
+
+  /**
+   * Get the Text Align value from a style section
+   */
+  async getStyleSectionTextAlign(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<string> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const select = sectionLocator.locator('.ant-form-item:has-text("Text Align") .ant-select-selection-item')
+    return (await select.textContent()) || ''
+  }
+
+  /**
+   * Select a Text Align value in a style section
+   */
+  async selectStyleSectionTextAlign(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy',
+    value: 'left' | 'center' | 'right'
+  ): Promise<void> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const select = sectionLocator.locator('.ant-form-item:has-text("Text Align") .ant-select')
+    await select.click()
+    await this.page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item', { hasText: value }).click()
+  }
+
+  /**
+   * Get the Top position value from a style section
+   */
+  async getStyleSectionTop(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<string> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Top") input.ant-input')
+    return (await input.inputValue()) || ''
+  }
+
+  /**
+   * Fill the Top position value in a style section
+   */
+  async fillStyleSectionTop(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy',
+    value: string
+  ): Promise<void> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Top") input.ant-input')
+    await input.fill(value)
+    await input.blur()
+  }
+
+  /**
+   * Get the Appear Animation value from a style section
+   */
+  async getStyleSectionAppearAnimation(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<string> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const select = sectionLocator.locator('.ant-form-item:has-text("Appear Animation") .ant-select-selection-item')
+    return (await select.textContent()) || ''
+  }
+
+  /**
+   * Select an Appear Animation value in a style section
+   */
+  async selectStyleSectionAppearAnimation(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy',
+    value: string
+  ): Promise<void> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const select = sectionLocator.locator('.ant-form-item:has-text("Appear Animation") .ant-select')
+    await select.click()
+    await this.page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item', { hasText: value }).click()
+  }
+
+  /**
+   * Check if Typography section label is visible within a style section
+   */
+  async isTypographySectionVisible(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<boolean> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const typographyLabel = sectionLocator.getByText('Typography', { exact: true })
+    return await typographyLabel.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Check if Position & Dimensions section label is visible within a style section
+   */
+  async isPositionSectionVisible(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<boolean> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const positionLabel = sectionLocator.getByText('Position & Dimensions', { exact: true })
+    return await positionLabel.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Check if Animation section label is visible within a style section
+   */
+  async isAnimationSectionVisible(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<boolean> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const animationLabel = sectionLocator.getByText('Animation', { exact: true })
+    return await animationLabel.isVisible().catch(() => {
+      return false
+    })
   }
 }

@@ -414,134 +414,261 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
+  test.describe('Campaign Style Settings Modal', () => {
+    test('should open Campaign Style Settings modal when clicking Configure Styles', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      const isVisible = await storyboardPage.isStyleModalVisible()
+      expect(isVisible).toBe(true)
+    })
+
+    test('should close Campaign Style Settings modal when clicking Cancel', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      await storyboardPage.clickStyleModalCancel()
+
+      // Wait for modal to close
+      await storyboardPage.page.waitForTimeout(300)
+
+      const isVisible = await storyboardPage.isStyleModalVisible()
+      expect(isVisible).toBe(false)
+    })
+
+    test('should display all 5 style sections in the modal', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      const sections = [
+        'headline',
+        'sub-headline',
+        'body-copy',
+        'cta-copy',
+        'legal-copy',
+      ] as const
+
+      for (const section of sections) {
+        const isVisible = await storyboardPage.isStyleSectionVisible(section)
+        expect(isVisible).toBe(true)
+      }
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should have Headline Style section expanded by default', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      const isExpanded = await storyboardPage.isStyleSectionExpanded('headline')
+      expect(isExpanded).toBe(true)
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should have other style sections collapsed by default', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      const collapsedSections = [
+        'sub-headline',
+        'body-copy',
+        'cta-copy',
+        'legal-copy',
+      ] as const
+
+      for (const section of collapsedSections) {
+        const isExpanded = await storyboardPage.isStyleSectionExpanded(section)
+        expect(isExpanded).toBe(false)
+      }
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should expand a collapsed style section when clicked', async ({
+      page,
+    }) => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      // Sub-headline should be collapsed by default
+      let isExpanded = await storyboardPage.isStyleSectionExpanded('sub-headline')
+      expect(isExpanded).toBe(false)
+
+      // Scroll the section into view first
+      const sectionLocator = page.getByTestId('sub-headline-style-section')
+      await sectionLocator.scrollIntoViewIfNeeded()
+
+      // Click to expand
+      await storyboardPage.toggleStyleSection('sub-headline')
+
+      // Wait for animation to complete
+      await page.waitForTimeout(500)
+
+      isExpanded = await storyboardPage.isStyleSectionExpanded('sub-headline')
+      expect(isExpanded).toBe(true)
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should display Typography, Position & Dimensions, and Animation subsections when expanded', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      // Headline section is expanded by default
+      const isTypographyVisible =
+        await storyboardPage.isTypographySectionVisible('headline')
+      const isPositionVisible =
+        await storyboardPage.isPositionSectionVisible('headline')
+      const isAnimationVisible =
+        await storyboardPage.isAnimationSectionVisible('headline')
+
+      expect(isTypographyVisible).toBe(true)
+      expect(isPositionVisible).toBe(true)
+      expect(isAnimationVisible).toBe(true)
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should allow editing Font Size in a style section', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      const testValue = '24px'
+      await storyboardPage.fillStyleSectionFontSize('headline', testValue)
+
+      const value = await storyboardPage.getStyleSectionFontSize('headline')
+      expect(value).toBe(testValue)
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should allow editing Top position in a style section', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      const testValue = '10px'
+      await storyboardPage.fillStyleSectionTop('headline', testValue)
+
+      const value = await storyboardPage.getStyleSectionTop('headline')
+      expect(value).toBe(testValue)
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should save style settings and close modal', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      // Make a change
+      await storyboardPage.fillStyleSectionFontSize('headline', '32px')
+
+      // Click save
+      await storyboardPage.clickStyleModalSave()
+
+      // Wait for modal to close
+      await storyboardPage.page.waitForTimeout(300)
+
+      const isVisible = await storyboardPage.isStyleModalVisible()
+      expect(isVisible).toBe(false)
+    })
+  })
+
   test.describe('Add Token Feature', () => {
-    test('should show Add Token button when variant is added', async ({ page }) => {
-      const addVariantButton = page.getByTestId('add-headline-variant-btn')
-      const buttonExists = await addVariantButton.isVisible().catch(() => {
-        return false
-      })
-
-      if (buttonExists) {
-        // Add a headline variant
-        await storyboardPage.addHeadlineVariant()
-
-        // Wait for the variant to appear
-        await page.waitForTimeout(300)
-
-        // Check if Add Token button is visible
-        const isAddTokenVisible =
-          await storyboardPage.isAddTokenButtonVisibleForHeadlineVariant(0)
-        expect(isAddTokenVisible).toBe(true)
-      }
+    test('should show Add Token button on default headline input', async () => {
+      // The Add Token button should now be visible on the default headline input
+      const isAddTokenVisible =
+        await storyboardPage.isAddTokenButtonVisibleInHeadlineSection()
+      expect(isAddTokenVisible).toBe(true)
     })
 
-    test('should open token dropdown when clicking Add Token button', async ({
+    test('should open token dropdown when clicking Add Token button on default headline', async () => {
+      // Click the Add Token button for default headline
+      await storyboardPage.clickAddTokenForDefaultHeadline()
+
+      // Wait for dropdown
+      await storyboardPage.waitForTokenDropdown()
+
+      // Get token items to verify dropdown has content
+      const tokenItems = await storyboardPage.getTokenDropdownItems()
+      expect(tokenItems.length).toBeGreaterThan(0)
+    })
+
+    test('should have token items in the dropdown', async () => {
+      // Click the Add Token button for default headline
+      await storyboardPage.clickAddTokenForDefaultHeadline()
+
+      // Get token items
+      const tokenItems = await storyboardPage.getTokenDropdownItems()
+
+      // Verify there are token items available
+      expect(tokenItems.length).toBeGreaterThan(0)
+    })
+
+    test('should insert token into default headline when token is selected', async ({
       page,
     }) => {
-      const addVariantButton = page.getByTestId('add-headline-variant-btn')
-      const buttonExists = await addVariantButton.isVisible().catch(() => {
-        return false
-      })
+      // Get initial value of default headline
+      const initialValue = await storyboardPage.getDefaultHeadlineValue()
 
-      if (buttonExists) {
-        // Add a headline variant
-        await storyboardPage.addHeadlineVariant()
-        await page.waitForTimeout(300)
+      // Click the Add Token button for default headline
+      await storyboardPage.clickAddTokenForDefaultHeadline()
 
-        // Click the Add Token button
-        await storyboardPage.clickAddTokenForHeadlineVariant(0)
+      // Get the first token from dropdown
+      const tokenItems = await storyboardPage.getTokenDropdownItems()
+      expect(tokenItems.length).toBeGreaterThan(0)
 
-        // Wait for dropdown and verify it's visible
-        await storyboardPage.waitForTokenDropdown()
-        const isDropdownVisible = await storyboardPage.isTokenDropdownVisible()
-        expect(isDropdownVisible).toBe(true)
-      }
+      // Click the first token
+      await storyboardPage.clickTokenItem(tokenItems[0])
+
+      // Wait for the token to be inserted
+      await page.waitForTimeout(200)
+
+      // Verify the token was inserted into the input (value should be different)
+      const newValue = await storyboardPage.getDefaultHeadlineValue()
+      expect(newValue).not.toBe(initialValue)
     })
 
-    test('should have token items in the dropdown', async ({ page }) => {
-      const addVariantButton = page.getByTestId('add-headline-variant-btn')
-      const buttonExists = await addVariantButton.isVisible().catch(() => {
-        return false
-      })
-
-      if (buttonExists) {
-        // Add a headline variant
-        await storyboardPage.addHeadlineVariant()
-        await page.waitForTimeout(300)
-
-        // Click the Add Token button
-        await storyboardPage.clickAddTokenForHeadlineVariant(0)
-
-        // Get token items
-        const tokenItems = await storyboardPage.getTokenDropdownItems()
-
-        // Verify there are token items available
-        expect(tokenItems.length).toBeGreaterThan(0)
-      }
-    })
-
-    test('should insert token into input field when token is selected', async ({
+    test('should enable Save button after inserting a token into default headline', async ({
       page,
     }) => {
-      const addVariantButton = page.getByTestId('add-headline-variant-btn')
-      const buttonExists = await addVariantButton.isVisible().catch(() => {
-        return false
-      })
+      // Click the Add Token button for default headline
+      await storyboardPage.clickAddTokenForDefaultHeadline()
 
-      if (buttonExists) {
-        // Add a headline variant
-        await storyboardPage.addHeadlineVariant()
-        await page.waitForTimeout(300)
+      // Get and click the first token
+      const tokenItems = await storyboardPage.getTokenDropdownItems()
+      await storyboardPage.clickTokenItem(tokenItems[0])
 
-        // Get initial value (should be empty)
-        const initialValue = await storyboardPage.getHeadlineVariantValue(0)
-        expect(initialValue).toBe('')
+      // Wait for the token to be inserted
+      await page.waitForTimeout(200)
 
-        // Click the Add Token button
-        await storyboardPage.clickAddTokenForHeadlineVariant(0)
-
-        // Get the first token from dropdown
-        const tokenItems = await storyboardPage.getTokenDropdownItems()
-        expect(tokenItems.length).toBeGreaterThan(0)
-
-        // Click the first token
-        await storyboardPage.clickTokenItem(tokenItems[0])
-
-        // Wait for the token to be inserted
-        await page.waitForTimeout(200)
-
-        // Verify the token was inserted into the input
-        const newValue = await storyboardPage.getHeadlineVariantValue(0)
-        expect(newValue.length).toBeGreaterThan(0)
-      }
+      // Verify Save button is enabled
+      const isEnabled = await storyboardPage.isSaveButtonEnabled()
+      expect(isEnabled).toBe(true)
     })
 
-    test('should enable Save button after inserting a token', async ({
+    test('should have Add Token button count increase when variant is added', async ({
       page,
     }) => {
+      // Get initial count of Add Token buttons (should be at least 1 for default headline)
+      const initialCount =
+        await storyboardPage.getAddTokenButtonCountInHeadlineSection()
+      expect(initialCount).toBeGreaterThanOrEqual(1)
+
+      // Add a headline variant if possible
       const addVariantButton = page.getByTestId('add-headline-variant-btn')
       const buttonExists = await addVariantButton.isVisible().catch(() => {
         return false
       })
 
       if (buttonExists) {
-        // Add a headline variant
         await storyboardPage.addHeadlineVariant()
         await page.waitForTimeout(300)
 
-        // Click the Add Token button
-        await storyboardPage.clickAddTokenForHeadlineVariant(0)
-
-        // Get and click the first token
-        const tokenItems = await storyboardPage.getTokenDropdownItems()
-        await storyboardPage.clickTokenItem(tokenItems[0])
-
-        // Wait for the token to be inserted
-        await page.waitForTimeout(200)
-
-        // Verify Save button is enabled
-        const isEnabled = await storyboardPage.isSaveButtonEnabled()
-        expect(isEnabled).toBe(true)
+        // Verify Add Token button count increased
+        const newCount =
+          await storyboardPage.getAddTokenButtonCountInHeadlineSection()
+        expect(newCount).toBe(initialCount + 1)
       }
     })
   })
