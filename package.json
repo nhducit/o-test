@@ -1,0 +1,25 @@
+{
+  "name": "internal-test",
+  "version": "1.0.0",
+  "description": "Internal E2E tests for O2O platform",
+  "main": "index.js",
+  "scripts": {
+    "test": "pnpm playwright test",
+    "test:ui": "pnpm playwright test --ui",
+    "test:headed": "pnpm playwright test --headed",
+    "test:debug": "pnpm playwright test --debug",
+    "show-report": "pnpm playwright show-report",
+    "install-browsers": "pnpm dlx playwright install"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^25.0.0",
+    "dotenv": "^17.2.3",
+    "typescript": "^5.9.3",
+    "zod": "^4.1.13",
+    "zod-validation-error": "^5.0.0"
+  }
+}
