@@ -495,4 +495,186 @@ export class StoryboardAndCopyPage {
     await expect(this.saveButton).toBeVisible()
     await expect(this.cancelButton).toBeVisible()
   }
+
+  // ==================== Add Token Methods ====================
+
+  /**
+   * Check if Add Token button is visible for a headline variant
+   */
+  async isAddTokenButtonVisibleForHeadlineVariant(index: number): Promise<boolean> {
+    const variantFormItem = this.headlineSection.locator(
+      `.ant-form-item:has-text("Variation Headline ${index + 1}")`
+    )
+    const addTokenBtn = variantFormItem.getByTestId('add-token-btn')
+    return await addTokenBtn.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Click the Add Token button for a headline variant
+   */
+  async clickAddTokenForHeadlineVariant(index: number): Promise<void> {
+    const variantFormItem = this.headlineSection.locator(
+      `.ant-form-item:has-text("Variation Headline ${index + 1}")`
+    )
+    await variantFormItem.getByTestId('add-token-btn').click()
+  }
+
+  /**
+   * Check if token dropdown is visible
+   */
+  async isTokenDropdownVisible(): Promise<boolean> {
+    const dropdown = this.page.locator('.ant-dropdown:not(.ant-dropdown-hidden)')
+    return await dropdown.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Wait for token dropdown to be visible
+   */
+  async waitForTokenDropdown(): Promise<void> {
+    await this.page.locator('.ant-dropdown:not(.ant-dropdown-hidden)').waitFor({ state: 'visible', timeout: 5000 })
+  }
+
+  /**
+   * Get all token items from dropdown
+   */
+  async getTokenDropdownItems(): Promise<string[]> {
+    await this.waitForTokenDropdown()
+    const items = this.page.locator('.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu-item')
+    const count = await items.count()
+    const labels: string[] = []
+    for (let i = 0; i < count; i++) {
+      const text = await items.nth(i).textContent()
+      if (text) {
+        labels.push(text.trim())
+      }
+    }
+    return labels
+  }
+
+  /**
+   * Click a token item in the dropdown by its label text
+   */
+  async clickTokenItem(label: string): Promise<void> {
+    await this.waitForTokenDropdown()
+    const item = this.page.locator('.ant-dropdown:not(.ant-dropdown-hidden) .ant-dropdown-menu-item', { hasText: label })
+    await item.click()
+  }
+
+  /**
+   * Get the value of a headline variant input
+   */
+  async getHeadlineVariantValue(index: number): Promise<string> {
+    const variantInput = this.headlineSection.locator(
+      `.ant-form-item:has-text("Variation Headline ${index + 1}") input`
+    )
+    return (await variantInput.inputValue()) || ''
+  }
+
+  // ==================== Preview Section Methods ====================
+
+  /**
+   * Click the Portrait button to switch preview orientation
+   * Note: Radio.Button's data-testid is on the hidden input, so we click the label wrapper
+   */
+  async selectPortraitPreview(): Promise<void> {
+    const previewToggle = this.page.getByTestId('preview-orientation-toggle')
+    await previewToggle.locator('label.ant-radio-button-wrapper', { hasText: 'Portrait' }).click()
+  }
+
+  /**
+   * Click the Landscape button to switch preview orientation
+   * Note: Radio.Button's data-testid is on the hidden input, so we click the label wrapper
+   */
+  async selectLandscapePreview(): Promise<void> {
+    const previewToggle = this.page.getByTestId('preview-orientation-toggle')
+    await previewToggle.locator('label.ant-radio-button-wrapper', { hasText: 'Landscape' }).click()
+  }
+
+  /**
+   * Check if Portrait is selected
+   */
+  async isPortraitSelected(): Promise<boolean> {
+    const previewToggle = this.page.getByTestId('preview-orientation-toggle')
+    const wrapper = previewToggle.locator('label.ant-radio-button-wrapper', { hasText: 'Portrait' })
+    const className = await wrapper.getAttribute('class')
+    return className?.includes('ant-radio-button-wrapper-checked') ?? false
+  }
+
+  /**
+   * Check if Landscape is selected
+   */
+  async isLandscapeSelected(): Promise<boolean> {
+    const previewToggle = this.page.getByTestId('preview-orientation-toggle')
+    const wrapper = previewToggle.locator('label.ant-radio-button-wrapper', { hasText: 'Landscape' })
+    const className = await wrapper.getAttribute('class')
+    return className?.includes('ant-radio-button-wrapper-checked') ?? false
+  }
+
+  /**
+   * Click the Generate Again button to open the Regenerate Preview modal
+   */
+  async clickGenerateAgain(): Promise<void> {
+    await this.page.getByTestId('generate-again-btn').click()
+  }
+
+  /**
+   * Check if Regenerate Preview modal is visible
+   */
+  async isRegenerateModalVisible(): Promise<boolean> {
+    const modal = this.page.getByRole('dialog', { name: 'Regenerate Preview' })
+    return await modal.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Wait for Regenerate Preview modal to be visible
+   */
+  async waitForRegenerateModal(): Promise<void> {
+    await expect(
+      this.page.getByRole('dialog', { name: 'Regenerate Preview' })
+    ).toBeVisible({ timeout: 10000 })
+  }
+
+  /**
+   * Select Image type in Regenerate Preview modal
+   */
+  async selectImageType(): Promise<void> {
+    await this.page.getByTestId('regenerate-type-image').click()
+  }
+
+  /**
+   * Select Video type in Regenerate Preview modal
+   */
+  async selectVideoType(): Promise<void> {
+    await this.page.getByTestId('regenerate-type-video').click()
+  }
+
+  /**
+   * Check if video-specific fields are visible (duration, fps, multi-shoot)
+   */
+  async areVideoFieldsVisible(): Promise<boolean> {
+    const durationField = this.page.getByText('Duration:')
+    return await durationField.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Click Cancel button in Regenerate Preview modal
+   */
+  async clickRegenerateModalCancel(): Promise<void> {
+    await this.page.getByTestId('regenerate-modal-cancel-btn').click()
+  }
+
+  /**
+   * Click Generate button in Regenerate Preview modal
+   */
+  async clickRegenerateModalGenerate(): Promise<void> {
+    await this.page.getByTestId('regenerate-modal-generate-btn').click()
+  }
 }

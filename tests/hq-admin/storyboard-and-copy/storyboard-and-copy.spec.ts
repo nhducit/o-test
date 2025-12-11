@@ -322,4 +322,228 @@ test.describe('Storyboard and Copy Page', () => {
       }
     })
   })
+
+  test.describe('Preview Orientation', () => {
+    test('should have Portrait selected by default', async () => {
+      const isPortrait = await storyboardPage.isPortraitSelected()
+      expect(isPortrait).toBe(true)
+    })
+
+    test('should switch to Landscape preview', async () => {
+      await storyboardPage.selectLandscapePreview()
+
+      const isLandscape = await storyboardPage.isLandscapeSelected()
+      expect(isLandscape).toBe(true)
+    })
+
+    test('should switch back to Portrait preview', async () => {
+      // First switch to landscape
+      await storyboardPage.selectLandscapePreview()
+      expect(await storyboardPage.isLandscapeSelected()).toBe(true)
+
+      // Switch back to portrait
+      await storyboardPage.selectPortraitPreview()
+      expect(await storyboardPage.isPortraitSelected()).toBe(true)
+    })
+  })
+
+  test.describe('Generate Again / Regenerate Preview', () => {
+    test('should open Regenerate Preview modal when clicking Generate Again', async () => {
+      await storyboardPage.clickGenerateAgain()
+
+      // Wait for modal to appear
+      await storyboardPage.waitForRegenerateModal()
+
+      const isVisible = await storyboardPage.isRegenerateModalVisible()
+      expect(isVisible).toBe(true)
+    })
+
+    test('should close Regenerate Preview modal when clicking Cancel', async () => {
+      await storyboardPage.clickGenerateAgain()
+      await storyboardPage.waitForRegenerateModal()
+
+      await storyboardPage.clickRegenerateModalCancel()
+
+      // Wait for modal to close
+      await storyboardPage.page.waitForTimeout(300)
+
+      const isVisible = await storyboardPage.isRegenerateModalVisible()
+      expect(isVisible).toBe(false)
+    })
+
+    test('should show video-specific fields when Video type is selected', async () => {
+      await storyboardPage.clickGenerateAgain()
+      await storyboardPage.waitForRegenerateModal()
+
+      // Video fields should not be visible initially (Image is default)
+      let videoFieldsVisible = await storyboardPage.areVideoFieldsVisible()
+      expect(videoFieldsVisible).toBe(false)
+
+      // Select Video type
+      await storyboardPage.selectVideoType()
+
+      // Wait for fields to appear
+      await storyboardPage.page.waitForTimeout(200)
+
+      // Video fields should now be visible
+      videoFieldsVisible = await storyboardPage.areVideoFieldsVisible()
+      expect(videoFieldsVisible).toBe(true)
+
+      // Close modal
+      await storyboardPage.clickRegenerateModalCancel()
+    })
+
+    test('should hide video-specific fields when switching back to Image type', async () => {
+      await storyboardPage.clickGenerateAgain()
+      await storyboardPage.waitForRegenerateModal()
+
+      // Select Video type first
+      await storyboardPage.selectVideoType()
+      await storyboardPage.page.waitForTimeout(200)
+
+      expect(await storyboardPage.areVideoFieldsVisible()).toBe(true)
+
+      // Switch back to Image type
+      await storyboardPage.selectImageType()
+      await storyboardPage.page.waitForTimeout(200)
+
+      expect(await storyboardPage.areVideoFieldsVisible()).toBe(false)
+
+      // Close modal
+      await storyboardPage.clickRegenerateModalCancel()
+    })
+  })
+
+  test.describe('Add Token Feature', () => {
+    test('should show Add Token button when variant is added', async ({ page }) => {
+      const addVariantButton = page.getByTestId('add-headline-variant-btn')
+      const buttonExists = await addVariantButton.isVisible().catch(() => {
+        return false
+      })
+
+      if (buttonExists) {
+        // Add a headline variant
+        await storyboardPage.addHeadlineVariant()
+
+        // Wait for the variant to appear
+        await page.waitForTimeout(300)
+
+        // Check if Add Token button is visible
+        const isAddTokenVisible =
+          await storyboardPage.isAddTokenButtonVisibleForHeadlineVariant(0)
+        expect(isAddTokenVisible).toBe(true)
+      }
+    })
+
+    test('should open token dropdown when clicking Add Token button', async ({
+      page,
+    }) => {
+      const addVariantButton = page.getByTestId('add-headline-variant-btn')
+      const buttonExists = await addVariantButton.isVisible().catch(() => {
+        return false
+      })
+
+      if (buttonExists) {
+        // Add a headline variant
+        await storyboardPage.addHeadlineVariant()
+        await page.waitForTimeout(300)
+
+        // Click the Add Token button
+        await storyboardPage.clickAddTokenForHeadlineVariant(0)
+
+        // Wait for dropdown and verify it's visible
+        await storyboardPage.waitForTokenDropdown()
+        const isDropdownVisible = await storyboardPage.isTokenDropdownVisible()
+        expect(isDropdownVisible).toBe(true)
+      }
+    })
+
+    test('should have token items in the dropdown', async ({ page }) => {
+      const addVariantButton = page.getByTestId('add-headline-variant-btn')
+      const buttonExists = await addVariantButton.isVisible().catch(() => {
+        return false
+      })
+
+      if (buttonExists) {
+        // Add a headline variant
+        await storyboardPage.addHeadlineVariant()
+        await page.waitForTimeout(300)
+
+        // Click the Add Token button
+        await storyboardPage.clickAddTokenForHeadlineVariant(0)
+
+        // Get token items
+        const tokenItems = await storyboardPage.getTokenDropdownItems()
+
+        // Verify there are token items available
+        expect(tokenItems.length).toBeGreaterThan(0)
+      }
+    })
+
+    test('should insert token into input field when token is selected', async ({
+      page,
+    }) => {
+      const addVariantButton = page.getByTestId('add-headline-variant-btn')
+      const buttonExists = await addVariantButton.isVisible().catch(() => {
+        return false
+      })
+
+      if (buttonExists) {
+        // Add a headline variant
+        await storyboardPage.addHeadlineVariant()
+        await page.waitForTimeout(300)
+
+        // Get initial value (should be empty)
+        const initialValue = await storyboardPage.getHeadlineVariantValue(0)
+        expect(initialValue).toBe('')
+
+        // Click the Add Token button
+        await storyboardPage.clickAddTokenForHeadlineVariant(0)
+
+        // Get the first token from dropdown
+        const tokenItems = await storyboardPage.getTokenDropdownItems()
+        expect(tokenItems.length).toBeGreaterThan(0)
+
+        // Click the first token
+        await storyboardPage.clickTokenItem(tokenItems[0])
+
+        // Wait for the token to be inserted
+        await page.waitForTimeout(200)
+
+        // Verify the token was inserted into the input
+        const newValue = await storyboardPage.getHeadlineVariantValue(0)
+        expect(newValue.length).toBeGreaterThan(0)
+      }
+    })
+
+    test('should enable Save button after inserting a token', async ({
+      page,
+    }) => {
+      const addVariantButton = page.getByTestId('add-headline-variant-btn')
+      const buttonExists = await addVariantButton.isVisible().catch(() => {
+        return false
+      })
+
+      if (buttonExists) {
+        // Add a headline variant
+        await storyboardPage.addHeadlineVariant()
+        await page.waitForTimeout(300)
+
+        // Click the Add Token button
+        await storyboardPage.clickAddTokenForHeadlineVariant(0)
+
+        // Get and click the first token
+        const tokenItems = await storyboardPage.getTokenDropdownItems()
+        await storyboardPage.clickTokenItem(tokenItems[0])
+
+        // Wait for the token to be inserted
+        await page.waitForTimeout(200)
+
+        // Verify Save button is enabled
+        const isEnabled = await storyboardPage.isSaveButtonEnabled()
+        expect(isEnabled).toBe(true)
+      }
+    })
+  })
+
 })
