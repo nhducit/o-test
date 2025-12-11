@@ -1,6 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
-
-// env is loaded via ./env.ts which is imported by config.ts
+import { authFile } from './config'
 
 export default defineConfig({
   timeout: process.env.NODE_ENV === 'development' ? 100000 : 60000,
@@ -24,7 +23,7 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: 'playwright/.auth/hq-admin-user.json',
+        storageState: authFile.hqAdmin,
       },
       dependencies: ['setup'],
     },

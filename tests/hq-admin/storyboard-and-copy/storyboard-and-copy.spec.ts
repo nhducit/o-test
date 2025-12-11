@@ -1,14 +1,19 @@
 import { test, expect } from '@playwright/test'
 import { StoryboardAndCopyPage } from './page-objects/storyboard-and-copy.page'
 import path from 'path'
+import { env } from '../../../env'
 
-const CAMPAIGN_ID = '7482'
+// Use campaign ID from environment variable, skip tests if not set
+const CAMPAIGN_ID = env.TEST_CAMPAIGN_ID
 
 test.describe('Storyboard and Copy Page', () => {
+  // Skip all tests in this suite if TEST_CAMPAIGN_ID is not set
+  test.skip(!CAMPAIGN_ID, 'TEST_CAMPAIGN_ID environment variable is required')
+
   let storyboardPage: StoryboardAndCopyPage
 
   test.beforeEach(async ({ page }) => {
-    storyboardPage = new StoryboardAndCopyPage(page, CAMPAIGN_ID)
+    storyboardPage = new StoryboardAndCopyPage(page, CAMPAIGN_ID!)
     await storyboardPage.navigateToPage()
   })
 

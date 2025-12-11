@@ -10,8 +10,10 @@ if (process.env.NODE_ENV !== 'production') {
   console.log = originalLog
 }
 
+const appEnvEnum = z.enum(['local', 'dev', 'staging'])
+
 const envSchema = z.object({
-  APP_ENV: z.string().default('local').describe('Application environment'),
+  APP_ENV: appEnvEnum.default('local').describe('Application environment (local, dev, staging)'),
   NODE_ENV: z.string().optional().describe('Node environment'),
 
   HQ_ADMIN_AUTH_EMAIL: z
@@ -23,6 +25,12 @@ const envSchema = z.object({
     .string()
     .min(1, 'HQ_ADMIN_AUTH_PASSWORD is required')
     .describe('HQ Admin authentication password'),
+
+  // Optional: Campaign ID for running tests against a specific campaign
+  TEST_CAMPAIGN_ID: z
+    .string()
+    .optional()
+    .describe('Campaign ID for running storyboard & copy tests against a specific campaign'),
 })
 
 const parseEnv = () => {
@@ -31,6 +39,7 @@ const parseEnv = () => {
     NODE_ENV: process.env.NODE_ENV,
     HQ_ADMIN_AUTH_EMAIL: process.env.HQ_ADMIN_AUTH_EMAIL,
     HQ_ADMIN_AUTH_PASSWORD: process.env.HQ_ADMIN_AUTH_PASSWORD,
+    TEST_CAMPAIGN_ID: process.env.TEST_CAMPAIGN_ID,
   })
 
   if (result.success === false) {
@@ -54,3 +63,4 @@ const parseEnv = () => {
 export const env = parseEnv()
 
 export type Env = z.infer<typeof envSchema>
+export type AppEnv = z.infer<typeof appEnvEnum>
