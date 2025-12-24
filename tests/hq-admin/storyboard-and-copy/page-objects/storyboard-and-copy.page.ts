@@ -912,4 +912,68 @@ export class StoryboardAndCopyPage {
       return false
     })
   }
+
+  // ==================== Campaign Preview Methods ====================
+
+  /**
+   * Get the preview container dimensions
+   * Returns { width, height } based on the inline style of the preview container
+   */
+  async getPreviewContainerDimensions(): Promise<{ width: number; height: number }> {
+    const previewContainer = this.page.locator('[data-testid="configure-styles-btn"]').locator('..')
+    const containerWithDimensions = previewContainer.locator('div').first()
+
+    // Get the computed style
+    const boundingBox = await containerWithDimensions.boundingBox()
+    if (boundingBox) {
+      return { width: Math.round(boundingBox.width), height: Math.round(boundingBox.height) }
+    }
+    return { width: 0, height: 0 }
+  }
+
+  /**
+   * Wait for preview to update after orientation change
+   * Waits for network idle to ensure data has been refetched
+   */
+  async waitForPreviewUpdate(): Promise<void> {
+    await this.page.waitForLoadState('networkidle')
+    await this.page.waitForTimeout(500)
+  }
+
+  /**
+   * Click Save button in Campaign Style Settings modal and wait for save to complete
+   */
+  async clickStyleModalSaveAndWait(): Promise<void> {
+    await this.page.getByTestId('campaign-style-modal-save-btn').click()
+    // Wait for the modal to close (success message appears)
+    await this.page.waitForLoadState('networkidle')
+    // Wait for modal to close
+    await expect(
+      this.page.getByRole('dialog', { name: 'Campaign Style Settings' })
+    ).not.toBeVisible({ timeout: 10000 })
+  }
+
+  /**
+   * Get the Font Color value from a style section
+   */
+  async getStyleSectionFontColor(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<string> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Font Color") input')
+    return (await input.inputValue()) || ''
+  }
+
+  /**
+   * Fill the Font Color value in a style section
+   */
+  async fillStyleSectionFontColor(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy',
+    value: string
+  ): Promise<void> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Font Color") input')
+    await input.fill(value)
+    await input.blur()
+  }
 }

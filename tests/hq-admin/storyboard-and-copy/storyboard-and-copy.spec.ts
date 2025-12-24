@@ -579,6 +579,162 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
+  test.describe('Campaign Preview Style Tests', () => {
+    test('switching between portrait and landscape should update the campaign preview', async () => {
+      // Verify Portrait is selected by default
+      expect(await storyboardPage.isPortraitSelected()).toBe(true)
+
+      // Get initial preview dimensions (portrait: 270x480)
+      const portraitDimensions = await storyboardPage.getPreviewContainerDimensions()
+
+      // Switch to Landscape
+      await storyboardPage.selectLandscapePreview()
+      await storyboardPage.waitForPreviewUpdate()
+
+      // Verify Landscape is selected
+      expect(await storyboardPage.isLandscapeSelected()).toBe(true)
+
+      // Get landscape dimensions (landscape: 480x270)
+      const landscapeDimensions = await storyboardPage.getPreviewContainerDimensions()
+
+      // Verify dimensions changed - landscape should be wider than portrait
+      expect(landscapeDimensions.width).toBeGreaterThan(portraitDimensions.width)
+      expect(landscapeDimensions.height).toBeLessThan(portraitDimensions.height)
+
+      // Switch back to Portrait
+      await storyboardPage.selectPortraitPreview()
+      await storyboardPage.waitForPreviewUpdate()
+
+      // Verify Portrait is selected again
+      expect(await storyboardPage.isPortraitSelected()).toBe(true)
+
+      // Get final dimensions
+      const finalDimensions = await storyboardPage.getPreviewContainerDimensions()
+
+      // Verify dimensions match original portrait dimensions
+      expect(finalDimensions.width).toBe(portraitDimensions.width)
+      expect(finalDimensions.height).toBe(portraitDimensions.height)
+    })
+
+    test('portrait: clicking Configure Styles should open the modal', async () => {
+      // Ensure Portrait is selected
+      expect(await storyboardPage.isPortraitSelected()).toBe(true)
+
+      // Click Configure Styles button
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      // Verify modal is visible
+      const isVisible = await storyboardPage.isStyleModalVisible()
+      expect(isVisible).toBe(true)
+
+      // Close modal
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('portrait: update form values, save changes, new text styles should be reflected', async ({
+      page,
+    }) => {
+      // Ensure Portrait is selected
+      expect(await storyboardPage.isPortraitSelected()).toBe(true)
+
+      // Open Configure Styles modal
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      // Get original font size value
+      const originalFontSize = await storyboardPage.getStyleSectionFontSize('headline')
+
+      // Update the font size to a new value
+      const newFontSize = originalFontSize === '24px' ? '32px' : '24px'
+      await storyboardPage.fillStyleSectionFontSize('headline', newFontSize)
+
+      // Save changes and wait for completion
+      await storyboardPage.clickStyleModalSaveAndWait()
+
+      // Wait for success message
+      await expect(page.getByText('Styles saved successfully')).toBeVisible({ timeout: 5000 })
+
+      // Wait for preview data to refetch
+      await storyboardPage.waitForPreviewUpdate()
+
+      // Re-open modal to verify the value was saved
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      // Verify the new value is reflected
+      const savedFontSize = await storyboardPage.getStyleSectionFontSize('headline')
+      expect(savedFontSize).toBe(newFontSize)
+
+      // Restore original value
+      await storyboardPage.fillStyleSectionFontSize('headline', originalFontSize)
+      await storyboardPage.clickStyleModalSaveAndWait()
+    })
+
+    test('landscape: clicking Configure Styles should open the modal', async () => {
+      // Switch to Landscape
+      await storyboardPage.selectLandscapePreview()
+      await storyboardPage.waitForPreviewUpdate()
+
+      // Verify Landscape is selected
+      expect(await storyboardPage.isLandscapeSelected()).toBe(true)
+
+      // Click Configure Styles button
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      // Verify modal is visible
+      const isVisible = await storyboardPage.isStyleModalVisible()
+      expect(isVisible).toBe(true)
+
+      // Close modal
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('landscape: update form values, save changes, new text styles should be reflected', async ({
+      page,
+    }) => {
+      // Switch to Landscape
+      await storyboardPage.selectLandscapePreview()
+      await storyboardPage.waitForPreviewUpdate()
+
+      // Verify Landscape is selected
+      expect(await storyboardPage.isLandscapeSelected()).toBe(true)
+
+      // Open Configure Styles modal
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      // Get original font size value
+      const originalFontSize = await storyboardPage.getStyleSectionFontSize('headline')
+
+      // Update the font size to a new value
+      const newFontSize = originalFontSize === '28px' ? '36px' : '28px'
+      await storyboardPage.fillStyleSectionFontSize('headline', newFontSize)
+
+      // Save changes and wait for completion
+      await storyboardPage.clickStyleModalSaveAndWait()
+
+      // Wait for success message
+      await expect(page.getByText('Styles saved successfully')).toBeVisible({ timeout: 5000 })
+
+      // Wait for preview data to refetch
+      await storyboardPage.waitForPreviewUpdate()
+
+      // Re-open modal to verify the value was saved
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      // Verify the new value is reflected
+      const savedFontSize = await storyboardPage.getStyleSectionFontSize('headline')
+      expect(savedFontSize).toBe(newFontSize)
+
+      // Restore original value
+      await storyboardPage.fillStyleSectionFontSize('headline', originalFontSize)
+      await storyboardPage.clickStyleModalSaveAndWait()
+    })
+  })
+
   test.describe('Add Token Feature', () => {
     test('should show Add Token button on default headline input', async () => {
       // The Add Token button should now be visible on the default headline input
