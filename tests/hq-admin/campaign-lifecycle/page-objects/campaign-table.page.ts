@@ -199,6 +199,49 @@ export class CampaignTablePage {
   }
 
   /**
+   * Check if Storyboard & Copy tab has a spinning icon (generation in progress)
+   */
+  async isStoryboardTabSpinning(): Promise<boolean> {
+    const storyboardTab = this.page.getByRole('tab', {
+      name: /Storyboard & Copy/,
+    })
+    // The spinning gear icon has the 'fa-spin' class
+    const spinningIcon = storyboardTab.locator('.fa-spin, [class*="fa-spin"]')
+    return await spinningIcon.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Check if Storyboard & Copy tab is disabled (during generation)
+   */
+  async isStoryboardTabDisabled(): Promise<boolean> {
+    const storyboardTab = this.page.getByRole('tab', {
+      name: /Storyboard & Copy/,
+    })
+    // Ant Design tabs use aria-disabled attribute when disabled
+    const ariaDisabled = await storyboardTab.getAttribute('aria-disabled')
+    return ariaDisabled === 'true'
+  }
+
+  /**
+   * Check if Storyboard & Copy tab is enabled (clickable)
+   */
+  async isStoryboardTabEnabled(): Promise<boolean> {
+    return !(await this.isStoryboardTabDisabled())
+  }
+
+  /**
+   * Wait for Storyboard & Copy tab to become enabled (generation complete)
+   */
+  async waitForStoryboardTabEnabled(timeout: number = 60000): Promise<void> {
+    await expect(async () => {
+      const isEnabled = await this.isStoryboardTabEnabled()
+      expect(isEnabled).toBe(true)
+    }).toPass({ timeout })
+  }
+
+  /**
    * Click on Storyboard & Copy tab
    */
   async clickStoryboardTab(): Promise<void> {

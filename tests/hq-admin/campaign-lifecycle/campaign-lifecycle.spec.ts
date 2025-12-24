@@ -71,45 +71,61 @@ test.describe('Campaign Lifecycle', () => {
       expect(isLoading).toBe(true)
     }).toPass({ timeout: 5000 })
 
-    // Step 11: Wait for Storyboard & Copy tab to appear (may take up to 60 seconds)
-    await campaignTablePage.waitForStoryboardTab(60000)
+    // Step 11: Wait for Storyboard & Copy tab to appear with spinning icon
+    await campaignTablePage.waitForStoryboardTab(10000)
 
-    // Step 12: Verify the tab is visible
+    // Step 12: Verify the tab is visible with spinning icon and is disabled
     const isTabVisible = await campaignTablePage.isStoryboardTabVisible()
     expect(isTabVisible).toBe(true)
 
-    // Step 13: Click on Storyboard & Copy tab and verify content
+    const isSpinning = await campaignTablePage.isStoryboardTabSpinning()
+    expect(isSpinning).toBe(true)
+
+    const isTabDisabled = await campaignTablePage.isStoryboardTabDisabled()
+    expect(isTabDisabled).toBe(true)
+
+    // Step 13: Wait for tab to become enabled (generation complete, may take up to 60 seconds)
+    await campaignTablePage.waitForStoryboardTabEnabled(60000)
+
+    // Step 14: Verify spinning icon is gone and tab is clickable
+    const isStillSpinning = await campaignTablePage.isStoryboardTabSpinning()
+    expect(isStillSpinning).toBe(false)
+
+    const isTabEnabled = await campaignTablePage.isStoryboardTabEnabled()
+    expect(isTabEnabled).toBe(true)
+
+    // Step 15: Click on Storyboard & Copy tab and verify content
     await campaignTablePage.clickStoryboardTab()
     await page.waitForLoadState('networkidle')
 
     // Initialize StoryboardAndCopyPage with the created campaign ID
     storyboardPage = new StoryboardAndCopyPage(page, createdCampaignId)
 
-    // Step 14: Verify all sections are visible
+    // Step 16: Verify all sections are visible
     await storyboardPage.verifySectionsVisible()
     await storyboardPage.verifyButtonsVisible()
 
-    // Step 15: Verify Save button is disabled initially (no changes made)
+    // Step 17: Verify Save button is disabled initially (no changes made)
     const isSaveDisabled = await storyboardPage.isSaveButtonDisabled()
     expect(isSaveDisabled).toBe(true)
 
-    // Step 16: Test editing headline and verify Save button becomes enabled
+    // Step 18: Test editing headline and verify Save button becomes enabled
     const testHeadline = `E2E Test Headline ${Date.now()}`
     await storyboardPage.fillDefaultHeadline(testHeadline)
 
     const isSaveEnabled = await storyboardPage.isSaveButtonEnabled()
     expect(isSaveEnabled).toBe(true)
 
-    // Step 17: Save the changes
+    // Step 19: Save the changes
     await storyboardPage.clickSaveAndWait()
 
-    // Step 18: Verify Save button is disabled after save
+    // Step 20: Verify Save button is disabled after save
     await expect(async () => {
       const isDisabled = await storyboardPage.isSaveButtonDisabled()
       expect(isDisabled).toBe(true)
     }).toPass({ timeout: 10000 })
 
-    // Step 19: Test preview orientation
+    // Step 21: Test preview orientation
     const isPortrait = await storyboardPage.isPortraitSelected()
     expect(isPortrait).toBe(true)
 
@@ -117,14 +133,14 @@ test.describe('Campaign Lifecycle', () => {
     const isLandscape = await storyboardPage.isLandscapeSelected()
     expect(isLandscape).toBe(true)
 
-    // Step 20: Test Regenerate Preview modal
+    // Step 22: Test Regenerate Preview modal
     await storyboardPage.clickGenerateAgain()
     await storyboardPage.waitForRegenerateModal()
     const isRegenerateModalVisible = await storyboardPage.isRegenerateModalVisible()
     expect(isRegenerateModalVisible).toBe(true)
     await storyboardPage.clickRegenerateModalCancel()
 
-    // Step 21: Test Campaign Style Settings modal
+    // Step 23: Test Campaign Style Settings modal
     await storyboardPage.clickConfigureStyles()
     await storyboardPage.waitForStyleModal()
     const isStyleModalVisible = await storyboardPage.isStyleModalVisible()
@@ -145,26 +161,26 @@ test.describe('Campaign Lifecycle', () => {
 
     await storyboardPage.clickStyleModalCancel()
 
-    // Step 22: Navigate back to campaign table
+    // Step 24: Navigate back to campaign table
     await campaignTablePage.navigateBackToTable()
 
-    // Step 23: Search for the created campaign
+    // Step 25: Search for the created campaign
     await campaignTablePage.searchCampaign(createdCampaignName)
 
-    // Step 24: Select the campaign row
+    // Step 26: Select the campaign row
     await campaignTablePage.selectCampaignRow(createdCampaignName)
 
-    // Step 25: Click "Delete Selected Campaigns" button
+    // Step 27: Click "Delete Selected Campaigns" button
     await campaignTablePage.clickDeleteSelectedCampaigns()
 
-    // Step 26: Wait for and confirm delete modal
+    // Step 28: Wait for and confirm delete modal
     await campaignTablePage.waitForDeleteConfirmModal()
     await campaignTablePage.confirmDelete()
 
-    // Step 27: Wait for delete success
+    // Step 29: Wait for delete success
     await campaignTablePage.waitForDeleteSuccess()
 
-    // Step 28: Verify campaign is no longer in the table
+    // Step 30: Verify campaign is no longer in the table
     const isDeleted = await campaignTablePage.verifyCampaignDeleted(
       createdCampaignName
     )
