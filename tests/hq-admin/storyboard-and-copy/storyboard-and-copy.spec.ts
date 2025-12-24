@@ -352,6 +352,44 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
+  test.describe('Preview Generation Loading States', () => {
+    test('should show loading state on Generate Again button when preview is generating', async ({
+      page,
+    }) => {
+      // Open the regenerate modal
+      await storyboardPage.clickGenerateAgain()
+      await storyboardPage.waitForRegenerateModal()
+
+      // Click Generate to start preview generation
+      await storyboardPage.clickRegenerateModalGenerate()
+
+      // Wait for modal to close and generation to start
+      await page.waitForTimeout(500)
+
+      // Check if Generate Again button is in loading state
+      const isLoading = await storyboardPage.isGenerateAgainLoading()
+      expect(isLoading).toBe(true)
+    })
+
+    test('should disable Configure Styles button when preview is generating', async ({
+      page,
+    }) => {
+      // Open the regenerate modal
+      await storyboardPage.clickGenerateAgain()
+      await storyboardPage.waitForRegenerateModal()
+
+      // Click Generate to start preview generation
+      await storyboardPage.clickRegenerateModalGenerate()
+
+      // Wait for modal to close and generation to start
+      await page.waitForTimeout(500)
+
+      // Check if Configure Styles button is disabled
+      const isDisabled = await storyboardPage.isConfigureStylesDisabled()
+      expect(isDisabled).toBe(true)
+    })
+  })
+
   test.describe('Generate Again / Regenerate Preview', () => {
     test('should open Regenerate Preview modal when clicking Generate Again', async () => {
       await storyboardPage.clickGenerateAgain()

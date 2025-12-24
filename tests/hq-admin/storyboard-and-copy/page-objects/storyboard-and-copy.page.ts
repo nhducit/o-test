@@ -637,6 +637,30 @@ export class StoryboardAndCopyPage {
   }
 
   /**
+   * Check if Generate Again button is in loading state
+   */
+  async isGenerateAgainLoading(): Promise<boolean> {
+    const button = this.page.getByTestId('generate-again-btn')
+    const className = await button.getAttribute('class')
+    return className?.includes('ant-btn-loading') ?? false
+  }
+
+  /**
+   * Check if Generate button is in loading state
+   */
+  async isGenerateLoading(): Promise<boolean> {
+    const button = this.page.getByTestId('generate-btn')
+    const isVisible = await button.isVisible().catch(() => {
+      return false
+    })
+    if (!isVisible) {
+      return false
+    }
+    const className = await button.getAttribute('class')
+    return className?.includes('ant-btn-loading') ?? false
+  }
+
+  /**
    * Check if Regenerate Preview modal is visible
    */
   async isRegenerateModalVisible(): Promise<boolean> {
@@ -700,6 +724,13 @@ export class StoryboardAndCopyPage {
    */
   async clickConfigureStyles(): Promise<void> {
     await this.page.getByTestId('configure-styles-btn').click()
+  }
+
+  /**
+   * Check if Configure Styles button is disabled
+   */
+  async isConfigureStylesDisabled(): Promise<boolean> {
+    return await this.page.getByTestId('configure-styles-btn').isDisabled()
   }
 
   /**
