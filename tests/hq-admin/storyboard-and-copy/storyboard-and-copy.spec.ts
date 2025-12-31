@@ -1192,6 +1192,49 @@ test.describe('Storyboard and Copy Page', () => {
   })
 
   test.describe('Preview Carousel Navigation', () => {
+    /**
+     * Helper to ensure at least 2 headline variants exist for carousel testing
+     * This adds a variant if needed, saves, and regenerates preview
+     */
+    async function ensureMultipleVariantsForCarousel(
+      page: import('@playwright/test').Page,
+      storyboardPage: import('./page-objects/storyboard-and-copy.page').StoryboardAndCopyPage
+    ): Promise<boolean> {
+      // Check current headline variants count
+      const variantCount = await storyboardPage.getHeadlineVariantsCount()
+
+      if (variantCount < 1) {
+        // Add a headline variant
+        const isDisabled = await storyboardPage.isAddHeadlineVariantDisabled()
+        if (isDisabled) {
+          return false // Cannot add more variants
+        }
+
+        await storyboardPage.addHeadlineVariant()
+        await storyboardPage.fillHeadlineVariant(0, `Test Variant ${Date.now()}`)
+
+        // Save the changes
+        await storyboardPage.clickSave()
+        await page.waitForTimeout(2000)
+
+        // Regenerate preview to include the new variant
+        const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
+        if (isClickable) {
+          await storyboardPage.clickGenerateAgain()
+          await storyboardPage.waitForRegenerateModal()
+          await storyboardPage.clickRegenerateModalGenerate()
+
+          // Wait for generation to start
+          await page.waitForTimeout(3000)
+
+          // Wait for Generate Again to be clickable again (generation complete)
+          await storyboardPage.waitForGenerateAgainClickable(60000)
+        }
+      }
+
+      return true
+    }
+
     test('should display carousel when previews exist', async ({}, testInfo) => {
       // Wait for Generate Again button to confirm previews exist
       const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
@@ -1204,7 +1247,7 @@ test.describe('Storyboard and Copy Page', () => {
       expect(isCarouselVisible).toBe(true)
     })
 
-    test('should navigate to next slide when clicking next button', async ({}, testInfo) => {
+    test('should navigate to next slide when clicking next button', async ({ page }, testInfo) => {
       const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
       if (!isClickable) {
         testInfo.skip(true, 'No previews exist - carousel not available')
@@ -1217,21 +1260,34 @@ test.describe('Storyboard and Copy Page', () => {
         return
       }
 
-      const slideCount = await storyboardPage.getCarouselSlideCount()
+      // Check slide count before ensuring variants
+      let slideCount = await storyboardPage.getCarouselSlideCount()
       if (slideCount < 2) {
-        testInfo.skip(true, 'Only one slide - cannot test navigation')
-        return
+        // Ensure at least 2 variants exist for proper carousel testing
+        const success = await ensureMultipleVariantsForCarousel(page, storyboardPage)
+        if (!success) {
+          testInfo.skip(true, 'Cannot add headline variants for carousel testing')
+          return
+        }
+        // Re-check slide count after adding variant
+        slideCount = await storyboardPage.getCarouselSlideCount()
+        if (slideCount < 2) {
+          testInfo.skip(true, 'Still only one slide after adding variant')
+          return
+        }
       }
 
       const initialIndex = await storyboardPage.getActiveCarouselSlideIndex()
       await storyboardPage.clickCarouselNext()
-      await storyboardPage.page.waitForTimeout(500) // Wait for animation
+      await page.waitForTimeout(500) // Wait for animation
 
       const newIndex = await storyboardPage.getActiveCarouselSlideIndex()
-      expect(newIndex).toBe(initialIndex + 1)
+      // Carousel may wrap around, so verify index changed (next or wrapped to 0)
+      const expectedNextIndex = (initialIndex + 1) % slideCount
+      expect(newIndex).toBe(expectedNextIndex)
     })
 
-    test('should navigate to previous slide when clicking prev button', async ({}, testInfo) => {
+    test('should navigate to previous slide when clicking prev button', async ({ page }, testInfo) => {
       const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
       if (!isClickable) {
         testInfo.skip(true, 'No previews exist - carousel not available')
@@ -1244,28 +1300,40 @@ test.describe('Storyboard and Copy Page', () => {
         return
       }
 
-      const slideCount = await storyboardPage.getCarouselSlideCount()
+      // Check slide count before ensuring variants
+      let slideCount = await storyboardPage.getCarouselSlideCount()
       if (slideCount < 2) {
-        testInfo.skip(true, 'Only one slide - cannot test navigation')
-        return
+        // Ensure at least 2 variants exist for proper carousel testing
+        const success = await ensureMultipleVariantsForCarousel(page, storyboardPage)
+        if (!success) {
+          testInfo.skip(true, 'Cannot add headline variants for carousel testing')
+          return
+        }
+        // Re-check slide count after adding variant
+        slideCount = await storyboardPage.getCarouselSlideCount()
+        if (slideCount < 2) {
+          testInfo.skip(true, 'Still only one slide after adding variant')
+          return
+        }
       }
 
-      // First go to next slide
+      // First go to next slide to ensure we're not at index 0
       await storyboardPage.clickCarouselNext()
-      await storyboardPage.page.waitForTimeout(500)
+      await page.waitForTimeout(500)
 
       const currentIndex = await storyboardPage.getActiveCarouselSlideIndex()
-      expect(currentIndex).toBeGreaterThan(0)
 
       // Now go back
       await storyboardPage.clickCarouselPrev()
-      await storyboardPage.page.waitForTimeout(500)
+      await page.waitForTimeout(500)
 
       const newIndex = await storyboardPage.getActiveCarouselSlideIndex()
-      expect(newIndex).toBe(currentIndex - 1)
+      // Carousel may wrap around, so verify prev navigation works correctly
+      const expectedPrevIndex = (currentIndex - 1 + slideCount) % slideCount
+      expect(newIndex).toBe(expectedPrevIndex)
     })
 
-    test('should have multiple slides when text variants exist', async ({}, testInfo) => {
+    test('should have multiple slides when text variants exist', async ({ page }, testInfo) => {
       const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
       if (!isClickable) {
         testInfo.skip(true, 'No previews exist - carousel not available')
@@ -1278,9 +1346,16 @@ test.describe('Storyboard and Copy Page', () => {
         return
       }
 
+      // Ensure at least 2 variants exist
+      const success = await ensureMultipleVariantsForCarousel(page, storyboardPage)
+      if (!success) {
+        testInfo.skip(true, 'Cannot add headline variants for carousel testing')
+        return
+      }
+
       const slideCount = await storyboardPage.getCarouselSlideCount()
-      // At minimum, there should be at least one slide
-      expect(slideCount).toBeGreaterThanOrEqual(1)
+      // With variants added, we should have multiple slides
+      expect(slideCount).toBeGreaterThanOrEqual(2)
     })
   })
 

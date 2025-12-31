@@ -1041,29 +1041,31 @@ export class StoryboardAndCopyPage {
    * Returns { width, height } based on the inline style of the preview container
    */
   async getPreviewContainerDimensions(): Promise<{ width: number; height: number }> {
-    // Look for the configure styles button first
-    const configureStylesBtn = this.page.getByTestId('configure-styles-btn')
+    // The preview container has class "rounded-lg overflow-hidden border border-gray-300"
+    // and has inline width/height styles set by the component
+    const previewContainer = this.page.locator('.rounded-lg.overflow-hidden.border.border-gray-300').first()
 
-    // Wait for the button to be visible (may be disabled but should be visible)
     try {
-      await configureStylesBtn.waitFor({ state: 'visible', timeout: 5000 })
-    } catch {
-      // If button is not found, return zero dimensions
-      return { width: 0, height: 0 }
-    }
-
-    const previewContainer = configureStylesBtn.locator('..')
-    const containerWithDimensions = previewContainer.locator('div').first()
-
-    // Get the computed style with a shorter timeout
-    try {
-      const boundingBox = await containerWithDimensions.boundingBox({ timeout: 5000 })
+      await previewContainer.waitFor({ state: 'visible', timeout: 5000 })
+      const boundingBox = await previewContainer.boundingBox({ timeout: 5000 })
       if (boundingBox) {
         return { width: Math.round(boundingBox.width), height: Math.round(boundingBox.height) }
       }
     } catch {
-      // If we can't get the bounding box, return zero
+      // If we can't find or get the bounding box, try alternative approach
     }
+
+    // Alternative: look for the slick-slider container which also has dimensions
+    try {
+      const slickSlider = this.page.locator('.slick-slider').first()
+      const boundingBox = await slickSlider.boundingBox({ timeout: 3000 })
+      if (boundingBox) {
+        return { width: Math.round(boundingBox.width), height: Math.round(boundingBox.height) }
+      }
+    } catch {
+      // If slick-slider also fails, return zero
+    }
+
     return { width: 0, height: 0 }
   }
 
@@ -1117,47 +1119,67 @@ export class StoryboardAndCopyPage {
 
   /**
    * Get the carousel container locator
+   * The carousel uses slick-slider class from Ant Design
    */
   private getCarouselContainer(): Locator {
-    return this.page.locator('.ant-carousel')
+    return this.page.locator('.slick-slider')
   }
 
   /**
    * Check if carousel is visible
+   * Checks for the presence of slick-slider (carousel) or the navigation buttons
    */
   async isCarouselVisible(): Promise<boolean> {
-    return await this.getCarouselContainer().isVisible().catch(() => {
+    // Check if carousel navigation buttons are visible (near Configure Styles button)
+    const configureStylesButton = this.page.getByRole('button', { name: 'Configure Styles' })
+    const isConfigureVisible = await configureStylesButton.isVisible().catch(() => false)
+    if (!isConfigureVisible) {
       return false
-    })
+    }
+    // Check for slick slider or the preview area with content
+    const slickSlider = this.page.locator('.slick-slider')
+    return await slickSlider.isVisible().catch(() => false)
   }
 
   /**
    * Click the previous button in the carousel
+   * The carousel control buttons are in a flex container after the carousel/preview area
+   * They are the buttons near the "Configure Styles" button
    */
   async clickCarouselPrev(): Promise<void> {
-    // The prev button is the first button in the carousel controls
-    const carouselButtons = this.page.locator('.ant-carousel').locator('..').locator('button')
-    await carouselButtons.first().click()
+    // Find the button container that has the prev/next buttons
+    // It's in the preview section, before the "Configure Styles" button
+    const configureStylesButton = this.page.getByRole('button', { name: 'Configure Styles' })
+    // Get the parent container and find the first two buttons (prev/next)
+    const buttonContainer = configureStylesButton.locator('..').locator('..')
+    const prevButton = buttonContainer.locator('button').first()
+    await prevButton.click()
   }
 
   /**
    * Click the next button in the carousel
    */
   async clickCarouselNext(): Promise<void> {
-    // The next button is the second button in the carousel controls
-    const carouselButtons = this.page.locator('.ant-carousel').locator('..').locator('button')
-    await carouselButtons.last().click()
+    // Find the button container that has the prev/next buttons
+    const configureStylesButton = this.page.getByRole('button', { name: 'Configure Styles' })
+    // Get the parent container and find the nav buttons
+    const buttonContainer = configureStylesButton.locator('..').locator('..')
+    const buttons = buttonContainer.locator('button')
+    // The next button is the second button (after prev)
+    await buttons.nth(1).click()
   }
 
   /**
    * Get the current active slide index (0-based)
+   * The carousel uses slick-slide class for slides
    */
   async getActiveCarouselSlideIndex(): Promise<number> {
-    const slides = this.page.locator('.ant-carousel .slick-slide')
+    // Try to find slides using the slick-slide class (Ant Design Carousel)
+    const slides = this.page.locator('.slick-slide:not(.slick-cloned)')
     const count = await slides.count()
     for (let i = 0; i < count; i++) {
       const className = await slides.nth(i).getAttribute('class')
-      if (className?.includes('slick-active')) {
+      if (className?.includes('slick-active') || className?.includes('slick-current')) {
         return i
       }
     }
@@ -1169,7 +1191,7 @@ export class StoryboardAndCopyPage {
    */
   async getCarouselSlideCount(): Promise<number> {
     // Count only actual slides, not cloned ones
-    const slides = this.page.locator('.ant-carousel .slick-slide:not(.slick-cloned)')
+    const slides = this.page.locator('.slick-slide:not(.slick-cloned)')
     return await slides.count()
   }
 
