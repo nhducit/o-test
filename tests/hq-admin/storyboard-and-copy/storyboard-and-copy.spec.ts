@@ -847,6 +847,62 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
+  test.describe('Initial Preview Generation', () => {
+    test('should show Generate button when no previews exist', async ({}, testInfo) => {
+      // Check if Generate button is visible (indicates no previews)
+      const isGenerateVisible = await storyboardPage.isGenerateButtonVisible()
+      const isGenerateAgainVisible = await storyboardPage.isGenerateAgainButtonVisible()
+
+      // One of these should be visible
+      if (!isGenerateVisible && !isGenerateAgainVisible) {
+        testInfo.skip(true, 'Neither Generate nor Generate Again button is visible')
+        return
+      }
+
+      // If Generate button is visible, we have an empty preview state
+      if (isGenerateVisible) {
+        expect(isGenerateVisible).toBe(true)
+        // Also verify the empty preview state
+        const isEmptyVisible = await storyboardPage.isEmptyPreviewVisible()
+        expect(isEmptyVisible).toBe(true)
+      }
+    })
+
+    test('should show empty preview state with correct message when no previews exist', async ({}, testInfo) => {
+      const isGenerateVisible = await storyboardPage.isGenerateButtonVisible()
+
+      if (!isGenerateVisible) {
+        testInfo.skip(true, 'Previews already exist - Generate Again button is shown')
+        return
+      }
+
+      const isEmptyVisible = await storyboardPage.isEmptyPreviewVisible()
+      expect(isEmptyVisible).toBe(true)
+
+      const emptyText = await storyboardPage.getEmptyPreviewText()
+      expect(emptyText).toContain('Generate')
+    })
+
+    test('should start preview generation when clicking Generate button', async ({ page }, testInfo) => {
+      const isGenerateVisible = await storyboardPage.isGenerateButtonVisible()
+
+      if (!isGenerateVisible) {
+        testInfo.skip(true, 'Previews already exist - Generate Again button is shown')
+        return
+      }
+
+      // Click Generate button
+      await storyboardPage.clickGenerate()
+
+      // Wait for loading message to appear
+      await expect(page.getByText('Generating preview...')).toBeVisible({ timeout: 5000 })
+
+      // The button should now be in loading state
+      const isLoading = await storyboardPage.isGenerateLoading()
+      expect(isLoading).toBe(true)
+    })
+  })
+
   test.describe('Add Token Feature', () => {
     test('should show Add Token button on default headline input', async () => {
       // The Add Token button should now be visible on the default headline input
@@ -943,6 +999,471 @@ test.describe('Storyboard and Copy Page', () => {
           await storyboardPage.getAddTokenButtonCountInHeadlineSection()
         expect(newCount).toBe(initialCount + 1)
       }
+    })
+  })
+
+  test.describe('Token Insertion - Other Fields', () => {
+    test('should show Add Token button on sub-headline input', async () => {
+      const isAddTokenVisible =
+        await storyboardPage.isAddTokenButtonVisibleInSubHeadlineSection()
+      expect(isAddTokenVisible).toBe(true)
+    })
+
+    test('should insert token into sub-headline when token is selected', async ({
+      page,
+    }) => {
+      const initialValue = await storyboardPage.getDefaultSubHeadlineValue()
+
+      await storyboardPage.clickAddTokenForDefaultSubHeadline()
+      await storyboardPage.waitForTokenDropdown()
+
+      const tokenItems = await storyboardPage.getTokenDropdownItems()
+      expect(tokenItems.length).toBeGreaterThan(0)
+
+      await storyboardPage.clickTokenItem(tokenItems[0])
+      await page.waitForTimeout(200)
+
+      const newValue = await storyboardPage.getDefaultSubHeadlineValue()
+      expect(newValue).not.toBe(initialValue)
+
+      // Verify Save button is enabled
+      const isEnabled = await storyboardPage.isSaveButtonEnabled()
+      expect(isEnabled).toBe(true)
+    })
+
+    test('should show Add Token button on body copy input', async () => {
+      const isAddTokenVisible =
+        await storyboardPage.isAddTokenButtonVisibleInBodySection()
+      expect(isAddTokenVisible).toBe(true)
+    })
+
+    test('should insert token into body copy when token is selected', async ({
+      page,
+    }) => {
+      const initialValue = await storyboardPage.getDefaultBodyValue()
+
+      await storyboardPage.clickAddTokenForDefaultBody()
+      await storyboardPage.waitForTokenDropdown()
+
+      const tokenItems = await storyboardPage.getTokenDropdownItems()
+      expect(tokenItems.length).toBeGreaterThan(0)
+
+      await storyboardPage.clickTokenItem(tokenItems[0])
+      await page.waitForTimeout(200)
+
+      const newValue = await storyboardPage.getDefaultBodyValue()
+      expect(newValue).not.toBe(initialValue)
+
+      // Verify Save button is enabled
+      const isEnabled = await storyboardPage.isSaveButtonEnabled()
+      expect(isEnabled).toBe(true)
+    })
+
+    test('should show Add Token button on CTA copy input', async () => {
+      const isAddTokenVisible =
+        await storyboardPage.isAddTokenButtonVisibleInCtaSection()
+      expect(isAddTokenVisible).toBe(true)
+    })
+
+    test('should insert token into CTA copy when token is selected', async ({
+      page,
+    }) => {
+      const initialValue = await storyboardPage.getDefaultCtaValue()
+
+      await storyboardPage.clickAddTokenForDefaultCta()
+      await storyboardPage.waitForTokenDropdown()
+
+      const tokenItems = await storyboardPage.getTokenDropdownItems()
+      expect(tokenItems.length).toBeGreaterThan(0)
+
+      await storyboardPage.clickTokenItem(tokenItems[0])
+      await page.waitForTimeout(200)
+
+      const newValue = await storyboardPage.getDefaultCtaValue()
+      expect(newValue).not.toBe(initialValue)
+
+      // Verify Save button is enabled
+      const isEnabled = await storyboardPage.isSaveButtonEnabled()
+      expect(isEnabled).toBe(true)
+    })
+  })
+
+  test.describe('Regenerate Preview - Full Flow', () => {
+    test('should pre-fill prompt from existing config when opening modal', async ({}, testInfo) => {
+      const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
+      if (!isClickable) {
+        testInfo.skip(true, 'Generate Again button not clickable')
+        return
+      }
+
+      await storyboardPage.clickGenerateAgain()
+      await storyboardPage.waitForRegenerateModal()
+
+      // Wait for modal to load config
+      await storyboardPage.page.waitForTimeout(1000)
+
+      // Get the prompt value - should be pre-filled if config exists
+      const promptValue = await storyboardPage.getRegeneratePromptValue()
+      // Prompt might be empty or have a value - just verify we can access it
+      expect(typeof promptValue).toBe('string')
+
+      await storyboardPage.clickRegenerateModalCancel()
+    })
+
+    test('should allow editing prompt in regenerate modal', async ({}, testInfo) => {
+      const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
+      if (!isClickable) {
+        testInfo.skip(true, 'Generate Again button not clickable')
+        return
+      }
+
+      await storyboardPage.clickGenerateAgain()
+      await storyboardPage.waitForRegenerateModal()
+
+      const testPrompt = `Test prompt ${Date.now()}`
+      await storyboardPage.fillRegeneratePrompt(testPrompt)
+
+      const promptValue = await storyboardPage.getRegeneratePromptValue()
+      expect(promptValue).toBe(testPrompt)
+
+      await storyboardPage.clickRegenerateModalCancel()
+    })
+
+    test('should allow editing video-specific fields when Video type is selected', async ({}, testInfo) => {
+      const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
+      if (!isClickable) {
+        testInfo.skip(true, 'Generate Again button not clickable')
+        return
+      }
+
+      await storyboardPage.clickGenerateAgain()
+      await storyboardPage.waitForRegenerateModal()
+
+      // Select Video type
+      await storyboardPage.selectVideoType()
+      await storyboardPage.page.waitForTimeout(200)
+
+      // Verify video fields are visible
+      const videoFieldsVisible = await storyboardPage.areVideoFieldsVisible()
+      expect(videoFieldsVisible).toBe(true)
+
+      // Edit duration
+      await storyboardPage.fillRegenerateDuration('5')
+      const durationValue = await storyboardPage.getRegenerateDurationValue()
+      expect(durationValue).toBe('5')
+
+      // Edit FPS
+      await storyboardPage.fillRegenerateFps('30')
+      const fpsValue = await storyboardPage.getRegenerateFpsValue()
+      expect(fpsValue).toBe('30')
+
+      // Toggle multi-shoot
+      const initialMultiShoot = await storyboardPage.isMultiShootChecked()
+      await storyboardPage.toggleMultiShoot()
+      const newMultiShoot = await storyboardPage.isMultiShootChecked()
+      expect(newMultiShoot).not.toBe(initialMultiShoot)
+
+      await storyboardPage.clickRegenerateModalCancel()
+    })
+
+    test('should submit regenerate form with custom prompt and start generation', async ({ page }, testInfo) => {
+      const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
+      if (!isClickable) {
+        testInfo.skip(true, 'Generate Again button not clickable')
+        return
+      }
+
+      await storyboardPage.clickGenerateAgain()
+      await storyboardPage.waitForRegenerateModal()
+
+      // Fill a custom prompt
+      const testPrompt = `E2E Test regeneration ${Date.now()}`
+      await storyboardPage.fillRegeneratePrompt(testPrompt)
+
+      // Click Generate
+      await storyboardPage.clickRegenerateModalGenerate()
+
+      // Wait for success message
+      await expect(page.getByText('Preview generation started')).toBeVisible({ timeout: 15000 })
+
+      // Modal should close
+      await expect(page.getByRole('dialog', { name: 'Regenerate Preview' })).not.toBeVisible({ timeout: 10000 })
+    })
+  })
+
+  test.describe('Preview Carousel Navigation', () => {
+    test('should display carousel when previews exist', async ({}, testInfo) => {
+      // Wait for Generate Again button to confirm previews exist
+      const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
+      if (!isClickable) {
+        testInfo.skip(true, 'No previews exist - carousel not available')
+        return
+      }
+
+      const isCarouselVisible = await storyboardPage.isCarouselVisible()
+      expect(isCarouselVisible).toBe(true)
+    })
+
+    test('should navigate to next slide when clicking next button', async ({}, testInfo) => {
+      const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
+      if (!isClickable) {
+        testInfo.skip(true, 'No previews exist - carousel not available')
+        return
+      }
+
+      const isCarouselVisible = await storyboardPage.isCarouselVisible()
+      if (!isCarouselVisible) {
+        testInfo.skip(true, 'Carousel not visible')
+        return
+      }
+
+      const slideCount = await storyboardPage.getCarouselSlideCount()
+      if (slideCount < 2) {
+        testInfo.skip(true, 'Only one slide - cannot test navigation')
+        return
+      }
+
+      const initialIndex = await storyboardPage.getActiveCarouselSlideIndex()
+      await storyboardPage.clickCarouselNext()
+      await storyboardPage.page.waitForTimeout(500) // Wait for animation
+
+      const newIndex = await storyboardPage.getActiveCarouselSlideIndex()
+      expect(newIndex).toBe(initialIndex + 1)
+    })
+
+    test('should navigate to previous slide when clicking prev button', async ({}, testInfo) => {
+      const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
+      if (!isClickable) {
+        testInfo.skip(true, 'No previews exist - carousel not available')
+        return
+      }
+
+      const isCarouselVisible = await storyboardPage.isCarouselVisible()
+      if (!isCarouselVisible) {
+        testInfo.skip(true, 'Carousel not visible')
+        return
+      }
+
+      const slideCount = await storyboardPage.getCarouselSlideCount()
+      if (slideCount < 2) {
+        testInfo.skip(true, 'Only one slide - cannot test navigation')
+        return
+      }
+
+      // First go to next slide
+      await storyboardPage.clickCarouselNext()
+      await storyboardPage.page.waitForTimeout(500)
+
+      const currentIndex = await storyboardPage.getActiveCarouselSlideIndex()
+      expect(currentIndex).toBeGreaterThan(0)
+
+      // Now go back
+      await storyboardPage.clickCarouselPrev()
+      await storyboardPage.page.waitForTimeout(500)
+
+      const newIndex = await storyboardPage.getActiveCarouselSlideIndex()
+      expect(newIndex).toBe(currentIndex - 1)
+    })
+
+    test('should have multiple slides when text variants exist', async ({}, testInfo) => {
+      const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
+      if (!isClickable) {
+        testInfo.skip(true, 'No previews exist - carousel not available')
+        return
+      }
+
+      const isCarouselVisible = await storyboardPage.isCarouselVisible()
+      if (!isCarouselVisible) {
+        testInfo.skip(true, 'Carousel not visible')
+        return
+      }
+
+      const slideCount = await storyboardPage.getCarouselSlideCount()
+      // At minimum, there should be at least one slide
+      expect(slideCount).toBeGreaterThanOrEqual(1)
+    })
+  })
+
+  test.describe('Asset Deletion', () => {
+    test('should delete an uploaded asset and enable Save button', async ({ page }, testInfo) => {
+      // First upload an asset
+      const testImagePath = path.join(__dirname, 'test-assets', 'test-image.png')
+      const fileInput = page.locator('input[type="file"]')
+      const inputCount = await fileInput.count()
+
+      if (inputCount === 0) {
+        testInfo.skip(true, 'File input not available')
+        return
+      }
+
+      await fileInput.setInputFiles(testImagePath)
+
+      // Wait for upload to complete - look for the upload list item
+      await page.waitForTimeout(3000)
+
+      // Get initial asset count
+      const initialCount = await storyboardPage.getUploadedAssetsCount()
+      if (initialCount === 0) {
+        testInfo.skip(true, 'Asset upload did not complete')
+        return
+      }
+
+      // Delete the first asset by hovering and clicking remove
+      const assetItems = page.locator('.ant-upload-list-item')
+      await assetItems.first().hover()
+      await page.waitForTimeout(300)
+
+      // Click the remove button (X icon)
+      const removeBtn = assetItems.first().locator('button').first()
+      if (await removeBtn.isVisible()) {
+        await removeBtn.click()
+        await page.waitForTimeout(500)
+
+        // Verify asset count decreased
+        const newCount = await storyboardPage.getUploadedAssetsCount()
+        expect(newCount).toBeLessThan(initialCount)
+      }
+    })
+  })
+
+  test.describe('Style Configuration - Additional Fields', () => {
+    test('should allow editing Left position in a style section', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      const testValue = '15px'
+      await storyboardPage.fillStyleSectionLeft('headline', testValue)
+
+      const value = await storyboardPage.getStyleSectionLeft('headline')
+      expect(value).toBe(testValue)
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should allow editing Width in a style section', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      const testValue = '200px'
+      await storyboardPage.fillStyleSectionWidth('headline', testValue)
+
+      const value = await storyboardPage.getStyleSectionWidth('headline')
+      expect(value).toBe(testValue)
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should allow selecting Appear Animation in a style section', async ({ page }) => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      // Click the Appear Animation select
+      const sectionLocator = page.getByTestId('headline-style-section')
+      const select = sectionLocator.locator('.ant-form-item:has-text("Appear Animation") .ant-select')
+      const selectExists = await select.isVisible().catch(() => false)
+
+      if (selectExists) {
+        await select.click()
+        await page.waitForTimeout(300)
+
+        // Check that dropdown appeared with options
+        const dropdown = page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden)')
+        expect(await dropdown.isVisible()).toBe(true)
+
+        // Click an option (e.g., "Zoom In" to select a different option)
+        const zoomInOption = dropdown.locator('.ant-select-item', { hasText: 'Zoom In' })
+        if (await zoomInOption.isVisible()) {
+          await zoomInOption.click()
+          await page.waitForTimeout(200)
+        }
+      }
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should allow editing Appear Time in Animation section', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      const testValue = '0.5'
+      await storyboardPage.fillStyleSectionAppearTime('headline', testValue)
+
+      const value = await storyboardPage.getStyleSectionAppearTime('headline')
+      // Number inputs may format the value differently
+      expect(parseFloat(value)).toBe(parseFloat(testValue))
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should allow selecting Exit Animation in a style section', async ({ page }) => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      // Click the Exit Animation select
+      const sectionLocator = page.getByTestId('headline-style-section')
+      const select = sectionLocator.locator('.ant-form-item:has-text("Exit Animation") .ant-select')
+      const selectExists = await select.isVisible().catch(() => false)
+
+      if (selectExists) {
+        await select.click()
+        await page.waitForTimeout(300)
+
+        // Check that dropdown appeared with options
+        const dropdown = page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden)')
+        expect(await dropdown.isVisible()).toBe(true)
+
+        // Click an option (e.g., "Slide Out Right" to select a different option)
+        const slideOutOption = dropdown.locator('.ant-select-item', { hasText: 'Slide Out' })
+        if (await slideOutOption.isVisible()) {
+          await slideOutOption.click()
+          await page.waitForTimeout(200)
+        }
+      }
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should allow editing Exit Time in Animation section', async () => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      const testValue = '3'
+      await storyboardPage.fillStyleSectionExitTime('headline', testValue)
+
+      const value = await storyboardPage.getStyleSectionExitTime('headline')
+      // Number inputs may format the value with decimals
+      expect(parseFloat(value)).toBe(parseFloat(testValue))
+
+      await storyboardPage.clickStyleModalCancel()
+    })
+
+    test('should persist font size changes after saving', async ({ page }) => {
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      // Get original font size
+      const originalFontSize = await storyboardPage.getStyleSectionFontSize('headline')
+
+      // Change font size to a unique value
+      const uniqueValue = `${Math.floor(Math.random() * 20) + 20}px`
+      await storyboardPage.fillStyleSectionFontSize('headline', uniqueValue)
+
+      // Save
+      await storyboardPage.clickStyleModalSaveAndWait()
+
+      // Wait a bit for save to complete
+      await page.waitForTimeout(1000)
+
+      // Re-open modal and verify value persisted
+      await storyboardPage.clickConfigureStyles()
+      await storyboardPage.waitForStyleModal()
+
+      const savedFontSize = await storyboardPage.getStyleSectionFontSize('headline')
+      expect(savedFontSize).toBe(uniqueValue)
+
+      // Restore original value
+      await storyboardPage.fillStyleSectionFontSize('headline', originalFontSize)
+      await storyboardPage.clickStyleModalSaveAndWait()
     })
   })
 

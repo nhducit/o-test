@@ -1112,4 +1112,412 @@ export class StoryboardAndCopyPage {
     await input.fill(value)
     await input.blur()
   }
+
+  // ==================== Preview Carousel Methods ====================
+
+  /**
+   * Get the carousel container locator
+   */
+  private getCarouselContainer(): Locator {
+    return this.page.locator('.ant-carousel')
+  }
+
+  /**
+   * Check if carousel is visible
+   */
+  async isCarouselVisible(): Promise<boolean> {
+    return await this.getCarouselContainer().isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Click the previous button in the carousel
+   */
+  async clickCarouselPrev(): Promise<void> {
+    // The prev button is the first button in the carousel controls
+    const carouselButtons = this.page.locator('.ant-carousel').locator('..').locator('button')
+    await carouselButtons.first().click()
+  }
+
+  /**
+   * Click the next button in the carousel
+   */
+  async clickCarouselNext(): Promise<void> {
+    // The next button is the second button in the carousel controls
+    const carouselButtons = this.page.locator('.ant-carousel').locator('..').locator('button')
+    await carouselButtons.last().click()
+  }
+
+  /**
+   * Get the current active slide index (0-based)
+   */
+  async getActiveCarouselSlideIndex(): Promise<number> {
+    const slides = this.page.locator('.ant-carousel .slick-slide')
+    const count = await slides.count()
+    for (let i = 0; i < count; i++) {
+      const className = await slides.nth(i).getAttribute('class')
+      if (className?.includes('slick-active')) {
+        return i
+      }
+    }
+    return 0
+  }
+
+  /**
+   * Get total number of carousel slides
+   */
+  async getCarouselSlideCount(): Promise<number> {
+    // Count only actual slides, not cloned ones
+    const slides = this.page.locator('.ant-carousel .slick-slide:not(.slick-cloned)')
+    return await slides.count()
+  }
+
+  // ==================== Empty Preview State Methods ====================
+
+  /**
+   * Check if empty preview state is visible
+   */
+  async isEmptyPreviewVisible(): Promise<boolean> {
+    const emptyState = this.page.locator('.ant-empty')
+    return await emptyState.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Get the empty preview description text
+   */
+  async getEmptyPreviewText(): Promise<string> {
+    const emptyDescription = this.page.locator('.ant-empty-description')
+    return (await emptyDescription.textContent()) || ''
+  }
+
+  // ==================== Regenerate Modal - Additional Methods ====================
+
+  /**
+   * Get the current prompt value in the regenerate modal
+   */
+  async getRegeneratePromptValue(): Promise<string> {
+    const textarea = this.page.locator('#regenerate-preview-form textarea')
+    return (await textarea.inputValue()) || ''
+  }
+
+  /**
+   * Fill the prompt value in the regenerate modal
+   */
+  async fillRegeneratePrompt(value: string): Promise<void> {
+    const textarea = this.page.locator('#regenerate-preview-form textarea')
+    await textarea.fill(value)
+  }
+
+  /**
+   * Get the duration value in the regenerate modal (video mode)
+   */
+  async getRegenerateDurationValue(): Promise<string> {
+    const durationInput = this.page.locator('#regenerate-preview-form input[type="number"]').first()
+    return (await durationInput.inputValue()) || ''
+  }
+
+  /**
+   * Fill the duration value in the regenerate modal (video mode)
+   */
+  async fillRegenerateDuration(value: string): Promise<void> {
+    const durationInput = this.page.locator('#regenerate-preview-form input[type="number"]').first()
+    await durationInput.fill(value)
+  }
+
+  /**
+   * Get the FPS value in the regenerate modal (video mode)
+   */
+  async getRegenerateFpsValue(): Promise<string> {
+    const fpsInput = this.page.locator('#regenerate-preview-form .ant-input-number input')
+    return (await fpsInput.inputValue()) || ''
+  }
+
+  /**
+   * Fill the FPS value in the regenerate modal (video mode)
+   */
+  async fillRegenerateFps(value: string): Promise<void> {
+    const fpsInput = this.page.locator('#regenerate-preview-form .ant-input-number input')
+    await fpsInput.fill(value)
+  }
+
+  /**
+   * Check if multi-shoot checkbox is checked
+   */
+  async isMultiShootChecked(): Promise<boolean> {
+    const checkbox = this.page.locator('#regenerate-preview-form .ant-checkbox-input')
+    return await checkbox.isChecked()
+  }
+
+  /**
+   * Toggle multi-shoot checkbox
+   */
+  async toggleMultiShoot(): Promise<void> {
+    const checkbox = this.page.locator('#regenerate-preview-form .ant-checkbox')
+    await checkbox.click()
+  }
+
+  /**
+   * Check if Image type is selected in regenerate modal
+   */
+  async isImageTypeSelected(): Promise<boolean> {
+    const imageRadio = this.page.getByTestId('regenerate-type-image')
+    return await imageRadio.isChecked()
+  }
+
+  /**
+   * Check if Video type is selected in regenerate modal
+   */
+  async isVideoTypeSelected(): Promise<boolean> {
+    const videoRadio = this.page.getByTestId('regenerate-type-video')
+    return await videoRadio.isChecked()
+  }
+
+  // ==================== Asset Management - Additional Methods ====================
+
+  /**
+   * Get list of uploaded asset names
+   */
+  async getUploadedAssetNames(): Promise<string[]> {
+    const assetItems = this.assetSection.locator('.ant-upload-list-item-name')
+    const count = await assetItems.count()
+    const names: string[] = []
+    for (let i = 0; i < count; i++) {
+      const name = await assetItems.nth(i).textContent()
+      if (name) {
+        names.push(name.trim())
+      }
+    }
+    return names
+  }
+
+  /**
+   * Delete an asset by clicking the remove button
+   * The remove button appears on hover, so we need to hover first
+   */
+  async deleteUploadedAsset(index: number): Promise<void> {
+    const assetItems = this.assetSection.locator('.ant-upload-list-item')
+    const itemCount = await assetItems.count()
+    if (itemCount > index) {
+      // Hover over the item to reveal the delete button
+      await assetItems.nth(index).hover()
+      // Click the delete/remove button
+      const removeButton = assetItems.nth(index).locator('.ant-upload-list-item-action button, .anticon-delete').first()
+      await removeButton.click()
+    }
+  }
+
+  /**
+   * Check if asset upload error is shown
+   */
+  async isAssetUploadErrorVisible(): Promise<boolean> {
+    const errorItem = this.assetSection.locator('.ant-upload-list-item-error')
+    return await errorItem.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  // ==================== Token Feature - Additional Fields ====================
+
+  /**
+   * Check if Add Token button is visible in the sub-headline section
+   */
+  async isAddTokenButtonVisibleInSubHeadlineSection(): Promise<boolean> {
+    const addTokenBtn = this.subHeadlineSection.getByTestId('add-token-btn').first()
+    return await addTokenBtn.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Click the Add Token button for the default sub-headline
+   */
+  async clickAddTokenForDefaultSubHeadline(): Promise<void> {
+    const addTokenBtns = this.subHeadlineSection.getByTestId('add-token-btn')
+    await addTokenBtns.first().click()
+  }
+
+  /**
+   * Check if Add Token button is visible in the body copy section
+   */
+  async isAddTokenButtonVisibleInBodySection(): Promise<boolean> {
+    const addTokenBtn = this.bodyCopySection.getByTestId('add-token-btn').first()
+    return await addTokenBtn.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Click the Add Token button for the default body copy
+   */
+  async clickAddTokenForDefaultBody(): Promise<void> {
+    const addTokenBtns = this.bodyCopySection.getByTestId('add-token-btn')
+    await addTokenBtns.first().click()
+  }
+
+  /**
+   * Check if Add Token button is visible in the CTA copy section
+   */
+  async isAddTokenButtonVisibleInCtaSection(): Promise<boolean> {
+    const addTokenBtn = this.ctaCopySection.getByTestId('add-token-btn').first()
+    return await addTokenBtn.isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Click the Add Token button for the default CTA copy
+   */
+  async clickAddTokenForDefaultCta(): Promise<void> {
+    const addTokenBtns = this.ctaCopySection.getByTestId('add-token-btn')
+    await addTokenBtns.first().click()
+  }
+
+  // ==================== Style Modal - Additional Fields ====================
+
+  /**
+   * Get the Left position value from a style section
+   */
+  async getStyleSectionLeft(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<string> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Left") input.ant-input')
+    return (await input.inputValue()) || ''
+  }
+
+  /**
+   * Fill the Left position value in a style section
+   */
+  async fillStyleSectionLeft(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy',
+    value: string
+  ): Promise<void> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Left") input.ant-input')
+    await input.fill(value)
+    await input.blur()
+  }
+
+  /**
+   * Get the Width value from a style section
+   */
+  async getStyleSectionWidth(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<string> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Width") input.ant-input')
+    return (await input.inputValue()) || ''
+  }
+
+  /**
+   * Fill the Width value in a style section
+   */
+  async fillStyleSectionWidth(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy',
+    value: string
+  ): Promise<void> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Width") input.ant-input')
+    await input.fill(value)
+    await input.blur()
+  }
+
+  /**
+   * Get the Appear Animation value from a style section
+   */
+  async getStyleSectionAppearAnimationValue(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<string> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const select = sectionLocator.locator('.ant-form-item:has-text("Appear Animation") .ant-select-selection-item')
+    return (await select.textContent()) || ''
+  }
+
+  /**
+   * Select an Appear Animation value in a style section
+   */
+  async selectStyleSectionAppearAnimationValue(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy',
+    value: string
+  ): Promise<void> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const select = sectionLocator.locator('.ant-form-item:has-text("Appear Animation") .ant-select')
+    await select.click()
+    await this.page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item', { hasText: value }).click()
+  }
+
+  /**
+   * Get the Appear Time value from a style section (seconds from scene start)
+   */
+  async getStyleSectionAppearTime(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<string> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Appear Time") input')
+    return (await input.inputValue()) || ''
+  }
+
+  /**
+   * Fill the Appear Time value in a style section
+   */
+  async fillStyleSectionAppearTime(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy',
+    value: string
+  ): Promise<void> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Appear Time") input')
+    await input.fill(value)
+    await input.blur()
+  }
+
+  /**
+   * Get the Exit Animation value from a style section
+   */
+  async getStyleSectionExitAnimation(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<string> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const select = sectionLocator.locator('.ant-form-item:has-text("Exit Animation") .ant-select-selection-item')
+    return (await select.textContent()) || ''
+  }
+
+  /**
+   * Select an Exit Animation value in a style section
+   */
+  async selectStyleSectionExitAnimation(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy',
+    value: string
+  ): Promise<void> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const select = sectionLocator.locator('.ant-form-item:has-text("Exit Animation") .ant-select')
+    await select.click()
+    await this.page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item', { hasText: value }).click()
+  }
+
+  /**
+   * Get the Exit Time value from a style section (seconds from appear)
+   */
+  async getStyleSectionExitTime(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy'
+  ): Promise<string> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Exit Time") input')
+    return (await input.inputValue()) || ''
+  }
+
+  /**
+   * Fill the Exit Time value in a style section
+   */
+  async fillStyleSectionExitTime(
+    section: 'headline' | 'sub-headline' | 'body-copy' | 'cta-copy' | 'legal-copy',
+    value: string
+  ): Promise<void> {
+    const sectionLocator = this.page.getByTestId(`${section}-style-section`)
+    const input = sectionLocator.locator('.ant-form-item:has-text("Exit Time") input')
+    await input.fill(value)
+    await input.blur()
+  }
 }
