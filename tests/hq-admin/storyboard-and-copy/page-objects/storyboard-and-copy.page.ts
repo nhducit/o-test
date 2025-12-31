@@ -1041,9 +1041,8 @@ export class StoryboardAndCopyPage {
    * Returns { width, height } based on the inline style of the preview container
    */
   async getPreviewContainerDimensions(): Promise<{ width: number; height: number }> {
-    // The preview container has class "rounded-lg overflow-hidden border border-gray-300"
-    // and has inline width/height styles set by the component
-    const previewContainer = this.page.locator('.rounded-lg.overflow-hidden.border.border-gray-300').first()
+    // The preview container has data-testid="campaign-preview-container"
+    const previewContainer = this.page.getByTestId('campaign-preview-container')
 
     try {
       await previewContainer.waitFor({ state: 'visible', timeout: 5000 })
@@ -1052,18 +1051,7 @@ export class StoryboardAndCopyPage {
         return { width: Math.round(boundingBox.width), height: Math.round(boundingBox.height) }
       }
     } catch {
-      // If we can't find or get the bounding box, try alternative approach
-    }
-
-    // Alternative: look for the slick-slider container which also has dimensions
-    try {
-      const slickSlider = this.page.locator('.slick-slider').first()
-      const boundingBox = await slickSlider.boundingBox({ timeout: 3000 })
-      if (boundingBox) {
-        return { width: Math.round(boundingBox.width), height: Math.round(boundingBox.height) }
-      }
-    } catch {
-      // If slick-slider also fails, return zero
+      // If we can't find or get the bounding box, return zero
     }
 
     return { width: 0, height: 0 }
