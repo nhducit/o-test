@@ -705,6 +705,37 @@ export class StoryboardAndCopyPage {
   }
 
   /**
+   * Check if the Generate Again button is clickable (visible and not loading)
+   */
+  async isGenerateAgainButtonClickable(): Promise<boolean> {
+    const button = this.page.getByTestId('generate-again-btn')
+    const isVisible = await button.isVisible().catch(() => {
+      return false
+    })
+    if (!isVisible) {
+      return false
+    }
+    // Check if button is NOT in loading state
+    const isLoading = await this.isGenerateAgainLoading()
+    return !isLoading
+  }
+
+  /**
+   * Wait for the Generate Again button to be clickable (not loading)
+   */
+  async waitForGenerateAgainClickable(timeout: number = 30000): Promise<boolean> {
+    try {
+      await expect(async () => {
+        const isClickable = await this.isGenerateAgainButtonClickable()
+        expect(isClickable).toBe(true)
+      }).toPass({ timeout })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
    * Wait for preview generation to complete by waiting for the Generate Again button to appear
    * This indicates that previews have been generated
    */
@@ -783,6 +814,13 @@ export class StoryboardAndCopyPage {
    */
   async isConfigureStylesDisabled(): Promise<boolean> {
     return await this.page.getByTestId('configure-styles-btn').isDisabled()
+  }
+
+  /**
+   * Check if Configure Styles button is enabled
+   */
+  async isConfigureStylesEnabled(): Promise<boolean> {
+    return await this.page.getByTestId('configure-styles-btn').isEnabled()
   }
 
   /**
@@ -1003,13 +1041,28 @@ export class StoryboardAndCopyPage {
    * Returns { width, height } based on the inline style of the preview container
    */
   async getPreviewContainerDimensions(): Promise<{ width: number; height: number }> {
-    const previewContainer = this.page.locator('[data-testid="configure-styles-btn"]').locator('..')
+    // Look for the configure styles button first
+    const configureStylesBtn = this.page.getByTestId('configure-styles-btn')
+
+    // Wait for the button to be visible (may be disabled but should be visible)
+    try {
+      await configureStylesBtn.waitFor({ state: 'visible', timeout: 5000 })
+    } catch {
+      // If button is not found, return zero dimensions
+      return { width: 0, height: 0 }
+    }
+
+    const previewContainer = configureStylesBtn.locator('..')
     const containerWithDimensions = previewContainer.locator('div').first()
 
-    // Get the computed style
-    const boundingBox = await containerWithDimensions.boundingBox()
-    if (boundingBox) {
-      return { width: Math.round(boundingBox.width), height: Math.round(boundingBox.height) }
+    // Get the computed style with a shorter timeout
+    try {
+      const boundingBox = await containerWithDimensions.boundingBox({ timeout: 5000 })
+      if (boundingBox) {
+        return { width: Math.round(boundingBox.width), height: Math.round(boundingBox.height) }
+      }
+    } catch {
+      // If we can't get the bounding box, return zero
     }
     return { width: 0, height: 0 }
   }
