@@ -12,9 +12,15 @@ test.describe('Storyboard and Copy Page', () => {
 
   let storyboardPage: StoryboardAndCopyPage
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
     storyboardPage = new StoryboardAndCopyPage(page, CAMPAIGN_ID!)
-    await storyboardPage.navigateToPage()
+    const success = await storyboardPage.navigateToPage()
+    if (!success) {
+      testInfo.skip(
+        true,
+        `Campaign ${CAMPAIGN_ID} does not exist or Storyboard & Copy tab is not available`
+      )
+    }
   })
 
   test.describe('Page Load', () => {

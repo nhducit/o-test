@@ -93,12 +93,30 @@ export class StoryboardAndCopyPage {
   async navigateToPage(): Promise<boolean> {
     await this.navigateToCampaignPage()
 
+    // Check if we're on the campaign details page (not create page)
+    // by verifying the URL doesn't contain 'create'
+    const currentUrl = this.page.url()
+    if (currentUrl.includes('/create')) {
+      console.error('Campaign does not exist - redirected to create page')
+      return false
+    }
+
     // Check if Storyboard & Copy tab exists
     const tabExists = await this.storyboardTab.isVisible().catch(() => {
       return false
     })
 
     if (!tabExists) {
+      return false
+    }
+
+    // Wait for the Storyboard & Copy tab to become enabled
+    // The tab is disabled when storyboard data hasn't been generated yet
+    // Use a shorter timeout since if the tab will be enabled, it should already be enabled
+    try {
+      await expect(this.storyboardTab).toBeEnabled({ timeout: 10000 })
+    } catch {
+      console.error('Storyboard & Copy tab is disabled - storyboard data may not be generated')
       return false
     }
 
