@@ -661,6 +661,40 @@ export class StoryboardAndCopyPage {
   }
 
   /**
+   * Click the initial Generate button to start preview generation
+   * This button appears when there are no previews yet
+   */
+  async clickGenerate(): Promise<void> {
+    await this.page.getByTestId('generate-btn').click()
+  }
+
+  /**
+   * Check if the initial Generate button is visible (no previews exist yet)
+   */
+  async isGenerateButtonVisible(): Promise<boolean> {
+    return await this.page.getByTestId('generate-btn').isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Check if the Generate Again button is visible (previews exist)
+   */
+  async isGenerateAgainButtonVisible(): Promise<boolean> {
+    return await this.page.getByTestId('generate-again-btn').isVisible().catch(() => {
+      return false
+    })
+  }
+
+  /**
+   * Wait for preview generation to complete by waiting for the Generate Again button to appear
+   * This indicates that previews have been generated
+   */
+  async waitForPreviewGenerationComplete(timeout: number = 60000): Promise<void> {
+    await expect(this.page.getByTestId('generate-again-btn')).toBeVisible({ timeout })
+  }
+
+  /**
    * Check if Regenerate Preview modal is visible
    */
   async isRegenerateModalVisible(): Promise<boolean> {
