@@ -49,7 +49,9 @@ test.describe('Storyboard and Copy Page', () => {
       await storyboardPage.fillDefaultHeadline(originalValue)
     })
 
-    test('should add a headline variant', async ({ page }) => {
+    // Add variant button is hidden in R4.2 - tests skipped
+    test('should add a headline variant', async ({ page }, testInfo) => {
+      testInfo.skip(true, 'Add variant button is hidden in R4.2')
       const addVariantButton = page.getByTestId('add-headline-variant-btn')
       const buttonExists = await addVariantButton.isVisible().catch(() => {
         return false
@@ -64,7 +66,9 @@ test.describe('Storyboard and Copy Page', () => {
       }
     })
 
-    test('should delete a headline variant', async ({ page }) => {
+    // Add variant button is hidden in R4.2 - tests skipped
+    test('should delete a headline variant', async ({ page }, testInfo) => {
+      testInfo.skip(true, 'Add variant button is hidden in R4.2')
       const addVariantButton = page.getByTestId('add-headline-variant-btn')
       const buttonExists = await addVariantButton.isVisible().catch(() => {
         return false
@@ -84,7 +88,9 @@ test.describe('Storyboard and Copy Page', () => {
       }
     })
 
-    test('should fill headline variant and enable save', async ({ page }) => {
+    // Add variant button is hidden in R4.2 - tests skipped
+    test('should fill headline variant and enable save', async ({ page }, testInfo) => {
+      testInfo.skip(true, 'Add variant button is hidden in R4.2')
       const addVariantButton = page.getByTestId('add-headline-variant-btn')
       const buttonExists = await addVariantButton.isVisible().catch(() => {
         return false
@@ -115,7 +121,9 @@ test.describe('Storyboard and Copy Page', () => {
       await storyboardPage.fillDefaultSubHeadline(originalValue)
     })
 
-    test('should add and delete a sub headline variant', async ({ page }) => {
+    // Add variant button is hidden in R4.2 - tests skipped
+    test('should add and delete a sub headline variant', async ({ page }, testInfo) => {
+      testInfo.skip(true, 'Add variant button is hidden in R4.2')
       const addVariantButton = page.getByTestId('add-sub-headline-variant-btn')
       const buttonExists = await addVariantButton.isVisible().catch(() => {
         return false
@@ -153,7 +161,9 @@ test.describe('Storyboard and Copy Page', () => {
       await storyboardPage.fillDefaultBody(originalValue)
     })
 
-    test('should add and delete a body copy variant', async ({ page }) => {
+    // Add variant button is hidden in R4.2 - tests skipped
+    test('should add and delete a body copy variant', async ({ page }, testInfo) => {
+      testInfo.skip(true, 'Add variant button is hidden in R4.2')
       const addVariantButton = page.getByTestId('add-body-variant-btn')
       const buttonExists = await addVariantButton.isVisible().catch(() => {
         return false
@@ -190,7 +200,9 @@ test.describe('Storyboard and Copy Page', () => {
       await storyboardPage.fillDefaultCta(originalValue)
     })
 
-    test('should add and delete a CTA variant', async ({ page }) => {
+    // Add variant button is hidden in R4.2 - tests skipped
+    test('should add and delete a CTA variant', async ({ page }, testInfo) => {
+      testInfo.skip(true, 'Add variant button is hidden in R4.2')
       const addVariantButton = page.getByTestId('add-cta-variant-btn')
       const buttonExists = await addVariantButton.isVisible().catch(() => {
         return false
@@ -228,7 +240,8 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
-  test.describe('Variant Limit Validation', () => {
+  // Add variant button is hidden in R4.2 - tests skipped
+  test.describe.skip('Variant Limit Validation', () => {
     test('should disable Add Variant button when 5 headline variants exist', async ({
       page,
     }) => {
@@ -903,7 +916,8 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
-  test.describe('Add Token Feature', () => {
+  // Add Token button is hidden in R4.2 - tests skipped
+  test.describe.skip('Add Token Feature', () => {
     test('should show Add Token button on default headline input', async () => {
       // The Add Token button should now be visible on the default headline input
       const isAddTokenVisible =
@@ -1002,7 +1016,8 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
-  test.describe('Token Insertion - Other Fields', () => {
+  // Add Token button is hidden in R4.2 - tests skipped
+  test.describe.skip('Token Insertion - Other Fields', () => {
     test('should show Add Token button on sub-headline input', async () => {
       const isAddTokenVisible =
         await storyboardPage.isAddTokenButtonVisibleInSubHeadlineSection()
@@ -1191,7 +1206,8 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
-  test.describe('Preview Carousel Navigation', () => {
+  // Navigation buttons are hidden in R4.2 - tests skipped
+  test.describe.skip('Preview Carousel Navigation', () => {
     /**
      * Helper to ensure at least 2 headline variants exist for carousel testing
      * This adds a variant if needed, saves, and regenerates preview

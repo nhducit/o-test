@@ -1131,30 +1131,20 @@ export class StoryboardAndCopyPage {
 
   /**
    * Click the previous button in the carousel
-   * The carousel control buttons are in a flex container after the carousel/preview area
-   * They are the buttons near the "Configure Styles" button
+   * @deprecated Navigation buttons are hidden in R4.2
    */
   async clickCarouselPrev(): Promise<void> {
-    // Find the button container that has the prev/next buttons
-    // It's in the preview section, before the "Configure Styles" button
-    const configureStylesButton = this.page.getByRole('button', { name: 'Configure Styles' })
-    // Get the parent container and find the first two buttons (prev/next)
-    const buttonContainer = configureStylesButton.locator('..').locator('..')
-    const prevButton = buttonContainer.locator('button').first()
-    await prevButton.click()
+    // Navigation buttons are hidden in R4.2
+    throw new Error('Carousel navigation buttons are hidden in R4.2')
   }
 
   /**
    * Click the next button in the carousel
+   * @deprecated Navigation buttons are hidden in R4.2
    */
   async clickCarouselNext(): Promise<void> {
-    // Find the button container that has the prev/next buttons
-    const configureStylesButton = this.page.getByRole('button', { name: 'Configure Styles' })
-    // Get the parent container and find the nav buttons
-    const buttonContainer = configureStylesButton.locator('..').locator('..')
-    const buttons = buttonContainer.locator('button')
-    // The next button is the second button (after prev)
-    await buttons.nth(1).click()
+    // Navigation buttons are hidden in R4.2
+    throw new Error('Carousel navigation buttons are hidden in R4.2')
   }
 
   /**
