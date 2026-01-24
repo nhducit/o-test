@@ -450,7 +450,7 @@ export class StoryboardAndCopyPage {
   }
 
   /**
-   * Check if a section is expanded by checking for ant-collapse-item-active class
+   * Check if a section is expanded by checking for ant-collapse-item-active class or expanded button
    */
   async isSectionExpanded(
     section:
@@ -462,22 +462,70 @@ export class StoryboardAndCopyPage {
       | 'asset'
   ): Promise<boolean> {
     const sectionLocator = this.page.getByTestId(`${section}-section`)
-    // Check if the collapse item has the active class
+    // First try: Check if the collapse item has the active class
     const collapseItem = sectionLocator.locator('.ant-collapse-item')
-    const className = await collapseItem.getAttribute('class')
-    return className?.includes('ant-collapse-item-active') ?? false
+    if (await collapseItem.count() > 0) {
+      const className = await collapseItem.getAttribute('class')
+      if (className?.includes('ant-collapse-item-active')) {
+        return true
+      }
+    }
+    // Fallback: Check if there's a button containing "expanded" in its name (vs "collapsed")
+    // Use regex to match buttons like "expanded HEADLINE", "expanded SUB HEADLINE", etc.
+    const expandedButton = sectionLocator.getByRole('button', { name: /^expanded/i })
+    return (await expandedButton.count()) > 0
+  }
+
+  /**
+   * Expand a section if it's collapsed
+   */
+  async expandSection(
+    section:
+      | 'headline'
+      | 'sub-headline'
+      | 'body-copy'
+      | 'cta-copy'
+      | 'legal-copy'
+      | 'asset'
+  ): Promise<void> {
+    const isExpanded = await this.isSectionExpanded(section)
+    if (!isExpanded) {
+      const sectionLocator = this.page.getByTestId(`${section}-section`)
+      // Click the collapsed button (icon) to expand
+      const collapsedButton = sectionLocator.getByRole('button', { name: 'collapsed' })
+      if (await collapsedButton.count() > 0) {
+        await collapsedButton.click()
+      } else {
+        // Fallback: try clicking the collapse header
+        const header = sectionLocator.locator('.ant-collapse-header')
+        if (await header.count() > 0) {
+          await header.click()
+        }
+      }
+      // Wait for animation to complete and content to render
+      await this.page.waitForTimeout(500)
+    }
   }
 
   /**
    * Expand the asset section if it's collapsed
    */
   async expandAssetSection(): Promise<void> {
-    const isExpanded = await this.isSectionExpanded('asset')
-    if (!isExpanded) {
-      await this.assetSection.locator('.ant-collapse-header').click()
-      // Wait for animation to complete
-      await this.page.waitForTimeout(300)
-    }
+    await this.expandSection('asset')
+  }
+
+  /**
+   * Expand the body copy section if it's collapsed
+   */
+  async expandBodyCopySection(): Promise<void> {
+    await this.expandSection('body-copy')
+  }
+
+  /**
+   * Expand the CTA copy section if it's collapsed
+   */
+  async expandCtaCopySection(): Promise<void> {
+    await this.expandSection('cta-copy')
   }
 
   /**
@@ -486,7 +534,12 @@ export class StoryboardAndCopyPage {
    */
   async uploadAsset(filePath: string): Promise<void> {
     await this.expandAssetSection()
+    // Wait for the collapse content to be fully rendered (Ant Design lazy loads collapse content)
+    await this.page.waitForTimeout(500)
+    // Find the file input - Ant Design Dragger renders it inside the upload area
     const fileInput = this.assetSection.locator('input[type="file"]')
+    // Wait for the input to be attached to DOM (may be lazy loaded)
+    await fileInput.waitFor({ state: 'attached', timeout: 10000 })
     await fileInput.setInputFiles(filePath)
   }
 

@@ -149,6 +149,9 @@ test.describe('Storyboard and Copy Page', () => {
 
   test.describe('Form Interactions - Body Copy Section', () => {
     test('should enable Save button after editing default body copy', async () => {
+      // Body copy section is collapsed by default, expand it first
+      await storyboardPage.expandBodyCopySection()
+
       const originalValue = await storyboardPage.getDefaultBodyValue()
       const newValue = `Test Body Copy ${Date.now()}`
 
@@ -188,6 +191,9 @@ test.describe('Storyboard and Copy Page', () => {
 
   test.describe('Form Interactions - CTA Copy Section', () => {
     test('should enable Save button after editing default CTA copy', async () => {
+      // CTA copy section is collapsed by default, expand it first
+      await storyboardPage.expandCtaCopySection()
+
       const originalValue = await storyboardPage.getDefaultCtaValue()
       const newValue = `Test CTA ${Date.now()}`
 
@@ -269,8 +275,9 @@ test.describe('Storyboard and Copy Page', () => {
 
   test.describe('Collapse/Expand Sections', () => {
     test('should have first 3 sections expanded by default', async () => {
-      const expandedSections = ['headline', 'sub-headline', 'body-copy'] as const
-      const collapsedSections = ['cta-copy', 'legal-copy', 'asset'] as const
+      // The UI has headline, sub-headline, and legal-copy expanded by default
+      const expandedSections = ['headline', 'sub-headline', 'legal-copy'] as const
+      const collapsedSections = ['body-copy', 'cta-copy', 'asset'] as const
 
       for (const section of expandedSections) {
         const isExpanded = await storyboardPage.isSectionExpanded(section)
