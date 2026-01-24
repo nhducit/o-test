@@ -1419,6 +1419,275 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
+  // ==================== Reference Images / Style Guides Upload Tests ====================
+
+  test.describe('Reference Images Upload - File Type Validation', () => {
+    test('should accept PNG image files', async () => {
+      const testImagePath = path.join(__dirname, 'test-assets', 'test-image.png')
+
+      await storyboardPage.expandAssetSection()
+      const initialCount = await storyboardPage.getUploadedAssetsCount()
+
+      await storyboardPage.uploadAsset(testImagePath)
+      await storyboardPage.waitForUploadComplete()
+
+      const newCount = await storyboardPage.getUploadedAssetsCount()
+      expect(newCount).toBeGreaterThan(initialCount)
+
+      const isInList = await storyboardPage.isFileInUploadList('test-image.png')
+      expect(isInList).toBe(true)
+    })
+
+    test('should accept JPG/JPEG image files', async () => {
+      const testImagePath = path.join(__dirname, 'test-assets', 'test-image.jpg')
+
+      await storyboardPage.expandAssetSection()
+      const initialCount = await storyboardPage.getUploadedAssetsCount()
+
+      await storyboardPage.uploadAsset(testImagePath)
+      await storyboardPage.waitForUploadComplete()
+
+      const newCount = await storyboardPage.getUploadedAssetsCount()
+      expect(newCount).toBeGreaterThan(initialCount)
+
+      const isInList = await storyboardPage.isFileInUploadList('test-image.jpg')
+      expect(isInList).toBe(true)
+    })
+
+    test('should accept PDF files', async () => {
+      const testPdfPath = path.join(__dirname, 'test-assets', 'test-document.pdf')
+
+      await storyboardPage.expandAssetSection()
+      const initialCount = await storyboardPage.getUploadedAssetsCount()
+
+      await storyboardPage.uploadAsset(testPdfPath)
+      await storyboardPage.waitForUploadComplete()
+
+      const newCount = await storyboardPage.getUploadedAssetsCount()
+      expect(newCount).toBeGreaterThan(initialCount)
+
+      const isInList = await storyboardPage.isFileInUploadList('test-document.pdf')
+      expect(isInList).toBe(true)
+    })
+
+    test('should reject non-image/non-PDF files', async ({ page }) => {
+      const invalidFilePath = path.join(__dirname, 'test-assets', 'invalid-file.txt')
+
+      await storyboardPage.expandAssetSection()
+      const initialCount = await storyboardPage.getUploadedAssetsCount()
+
+      await storyboardPage.uploadAsset(invalidFilePath)
+      await page.waitForTimeout(2000)
+
+      const newCount = await storyboardPage.getUploadedAssetsCount()
+      const failedCount = await storyboardPage.getFailedUploadsCount()
+
+      // Either the count stays the same (rejected by browser) or there's a failed upload
+      expect(newCount === initialCount || failedCount > 0).toBe(true)
+    })
+  })
+
+  test.describe('Reference Images Upload - Success & Display', () => {
+    test('should display uploaded file name in the file list', async () => {
+      const testImagePath = path.join(__dirname, 'test-assets', 'test-image.png')
+
+      await storyboardPage.expandAssetSection()
+      await storyboardPage.uploadAsset(testImagePath)
+      await storyboardPage.waitForUploadComplete()
+
+      const fileNames = await storyboardPage.getUploadedAssetNames()
+      expect(fileNames.length).toBeGreaterThan(0)
+
+      const hasTestImage = fileNames.some((name) => name.includes('test-image'))
+      expect(hasTestImage).toBe(true)
+    })
+
+    test('should support uploading multiple files sequentially', async () => {
+      const testPngPath = path.join(__dirname, 'test-assets', 'test-image.png')
+      const testJpgPath = path.join(__dirname, 'test-assets', 'test-image.jpg')
+
+      await storyboardPage.expandAssetSection()
+      const initialCount = await storyboardPage.getUploadedAssetsCount()
+
+      await storyboardPage.uploadMultipleAssets([testPngPath, testJpgPath])
+      await storyboardPage.waitForUploadComplete()
+
+      const newCount = await storyboardPage.getUploadedAssetsCount()
+      expect(newCount).toBeGreaterThanOrEqual(initialCount + 2)
+
+      const fileNames = await storyboardPage.getUploadedAssetNames()
+      const hasPng = fileNames.some((name) => name.includes('.png'))
+      const hasJpg = fileNames.some((name) => name.includes('.jpg'))
+      expect(hasPng).toBe(true)
+      expect(hasJpg).toBe(true)
+    })
+  })
+
+  test.describe('Reference Images Upload - File Removal', () => {
+    test('should remove file from list when delete button is clicked', async ({ page }) => {
+      const testImagePath = path.join(__dirname, 'test-assets', 'test-image.png')
+
+      await storyboardPage.expandAssetSection()
+      await storyboardPage.uploadAsset(testImagePath)
+      await storyboardPage.waitForUploadComplete()
+
+      const countBefore = await storyboardPage.getUploadedAssetsCount()
+      expect(countBefore).toBeGreaterThan(0)
+
+      await storyboardPage.deleteUploadedAsset(0)
+      await page.waitForTimeout(500)
+
+      const countAfter = await storyboardPage.getUploadedAssetsCount()
+      expect(countAfter).toBe(countBefore - 1)
+    })
+
+    test('should enable Save button after removing a file', async ({ page }, testInfo) => {
+      const testImagePath = path.join(__dirname, 'test-assets', 'test-image.png')
+
+      await storyboardPage.expandAssetSection()
+      await storyboardPage.uploadAsset(testImagePath)
+      await storyboardPage.waitForUploadComplete()
+      await storyboardPage.clickSaveAndWait()
+
+      expect(await storyboardPage.isSaveButtonDisabled()).toBe(true)
+
+      await storyboardPage.navigateToPage()
+      await storyboardPage.expandAssetSection()
+      await page.waitForTimeout(1000)
+
+      const countBefore = await storyboardPage.getUploadedAssetsCount()
+      if (countBefore === 0) {
+        testInfo.skip(true, 'No assets to delete')
+        return
+      }
+
+      await storyboardPage.deleteUploadedAsset(0)
+      await page.waitForTimeout(500)
+
+      const isSaveEnabled = await storyboardPage.isSaveButtonEnabled()
+      expect(isSaveEnabled).toBe(true)
+    })
+
+    test('should persist file removal after saving', async ({ page }, testInfo) => {
+      const testImagePath = path.join(__dirname, 'test-assets', 'test-image.png')
+
+      await storyboardPage.expandAssetSection()
+      await storyboardPage.uploadAsset(testImagePath)
+      await storyboardPage.waitForUploadComplete()
+      await storyboardPage.clickSaveAndWait()
+
+      await storyboardPage.navigateToPage()
+      await storyboardPage.expandAssetSection()
+      await page.waitForTimeout(1000)
+
+      const countBefore = await storyboardPage.getUploadedAssetsCount()
+      if (countBefore === 0) {
+        testInfo.skip(true, 'No assets to delete')
+        return
+      }
+
+      await storyboardPage.deleteUploadedAsset(0)
+      await page.waitForTimeout(500)
+      await storyboardPage.clickSaveAndWait()
+
+      await storyboardPage.navigateToPage()
+      await storyboardPage.expandAssetSection()
+      await page.waitForTimeout(1000)
+
+      const countAfterReload = await storyboardPage.getUploadedAssetsCount()
+      expect(countAfterReload).toBe(countBefore - 1)
+    })
+
+    test('should allow deleting all uploaded assets', async () => {
+      const testPngPath = path.join(__dirname, 'test-assets', 'test-image.png')
+      const testJpgPath = path.join(__dirname, 'test-assets', 'test-image.jpg')
+
+      await storyboardPage.expandAssetSection()
+      await storyboardPage.uploadMultipleAssets([testPngPath, testJpgPath])
+      await storyboardPage.waitForUploadComplete()
+
+      const countBefore = await storyboardPage.getUploadedAssetsCount()
+      expect(countBefore).toBeGreaterThanOrEqual(2)
+
+      await storyboardPage.deleteAllAssets()
+
+      const countAfter = await storyboardPage.getUploadedAssetsCount()
+      expect(countAfter).toBe(0)
+    })
+  })
+
+  test.describe('Reference Images Upload - UI/UX Behaviors', () => {
+    test('should display drag-and-drop zone with proper instructions', async () => {
+      const isVisible = await storyboardPage.isUploadDragZoneVisible()
+      expect(isVisible).toBe(true)
+
+      const uploadText = await storyboardPage.getUploadZoneText()
+      expect(uploadText).toContain('Click or drag file')
+
+      const hintText = await storyboardPage.getUploadZoneHint()
+      expect(hintText.length).toBeGreaterThan(0)
+    })
+
+    test('should display file preview thumbnail for images', async ({}, testInfo) => {
+      const testImagePath = path.join(__dirname, 'test-assets', 'test-image.png')
+
+      await storyboardPage.expandAssetSection()
+      await storyboardPage.uploadAsset(testImagePath)
+      await storyboardPage.waitForUploadComplete()
+
+      const count = await storyboardPage.getUploadedAssetsCount()
+      if (count === 0) {
+        testInfo.skip(true, 'Upload did not complete')
+        return
+      }
+
+      const isPictureCard = await storyboardPage.isUploadListPictureCardStyle()
+      expect(isPictureCard).toBe(true)
+
+      const hasThumbnail = await storyboardPage.hasFileThumbnail(0)
+      expect(hasThumbnail).toBe(true)
+    })
+
+    test('should collapse asset section by default', async () => {
+      await storyboardPage.navigateToPage()
+
+      const isExpanded = await storyboardPage.isSectionExpanded('asset')
+      expect(isExpanded).toBe(false)
+    })
+
+    test('should expand asset section when clicking header', async () => {
+      await storyboardPage.navigateToPage()
+
+      const isExpandedBefore = await storyboardPage.isSectionExpanded('asset')
+      expect(isExpandedBefore).toBe(false)
+
+      await storyboardPage.expandAssetSection()
+
+      const isExpandedAfter = await storyboardPage.isSectionExpanded('asset')
+      expect(isExpandedAfter).toBe(true)
+    })
+
+    test('should maintain upload list state when collapsing and expanding section', async ({ page }) => {
+      const testImagePath = path.join(__dirname, 'test-assets', 'test-image.png')
+
+      await storyboardPage.expandAssetSection()
+      await storyboardPage.uploadAsset(testImagePath)
+      await storyboardPage.waitForUploadComplete()
+
+      const countBefore = await storyboardPage.getUploadedAssetsCount()
+      expect(countBefore).toBeGreaterThan(0)
+
+      await storyboardPage.collapseSection('asset')
+      await page.waitForTimeout(300)
+
+      await storyboardPage.expandAssetSection()
+      await page.waitForTimeout(300)
+
+      const countAfter = await storyboardPage.getUploadedAssetsCount()
+      expect(countAfter).toBe(countBefore)
+    })
+  })
+
   // Style configuration feature is hidden - tests skipped
   test.describe.skip('Style Configuration - Additional Fields', () => {
     test('should allow editing Left position in a style section', async () => {

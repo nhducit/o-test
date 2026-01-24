@@ -1442,6 +1442,124 @@ export class StoryboardAndCopyPage {
     await addTokenBtns.first().click()
   }
 
+  // ==================== Reference Images / Style Guides Upload Methods ====================
+
+  /**
+   * Get the upload dragger container
+   */
+  private getUploadDragger(): Locator {
+    return this.assetSection.locator('.ant-upload-drag')
+  }
+
+  /**
+   * Check if the upload drag-and-drop zone is visible
+   */
+  async isUploadDragZoneVisible(): Promise<boolean> {
+    await this.expandAssetSection()
+    await this.page.waitForTimeout(300)
+    const dragger = this.getUploadDragger()
+    return await dragger.isVisible().catch(() => false)
+  }
+
+  /**
+   * Get the upload zone instruction text
+   */
+  async getUploadZoneText(): Promise<string> {
+    await this.expandAssetSection()
+    const textElement = this.assetSection.locator('.ant-upload-text')
+    return (await textElement.textContent()) || ''
+  }
+
+  /**
+   * Get the upload zone hint text
+   */
+  async getUploadZoneHint(): Promise<string> {
+    await this.expandAssetSection()
+    const hintElement = this.assetSection.locator('.ant-upload-hint')
+    return (await hintElement.textContent()) || ''
+  }
+
+  /**
+   * Wait for file upload to complete (success or error)
+   */
+  async waitForUploadComplete(timeout: number = 15000): Promise<void> {
+    await expect(async () => {
+      const uploadingItem = this.assetSection.locator('.ant-upload-list-item-uploading')
+      const count = await uploadingItem.count()
+      expect(count).toBe(0)
+    }).toPass({ timeout })
+  }
+
+  /**
+   * Check if there's a file currently uploading (showing progress)
+   */
+  async isFileUploading(): Promise<boolean> {
+    const uploadingItem = this.assetSection.locator('.ant-upload-list-item-uploading')
+    return (await uploadingItem.count()) > 0
+  }
+
+  /**
+   * Get the count of failed uploads (status: error)
+   */
+  async getFailedUploadsCount(): Promise<number> {
+    const errorItems = this.assetSection.locator('.ant-upload-list-item-error')
+    return await errorItems.count()
+  }
+
+  /**
+   * Check if a specific file appears in the upload list by name
+   */
+  async isFileInUploadList(fileName: string): Promise<boolean> {
+    const fileNames = await this.getUploadedAssetNames()
+    return fileNames.some((name) => name.includes(fileName))
+  }
+
+  /**
+   * Upload multiple files sequentially
+   */
+  async uploadMultipleAssets(filePaths: string[]): Promise<void> {
+    await this.expandAssetSection()
+    await this.page.waitForTimeout(500)
+
+    for (const filePath of filePaths) {
+      const fileInput = this.assetSection.locator('input[type="file"]')
+      await fileInput.waitFor({ state: 'attached', timeout: 10000 })
+      await fileInput.setInputFiles(filePath)
+      await this.page.waitForTimeout(2000)
+    }
+  }
+
+  /**
+   * Delete all uploaded assets
+   */
+  async deleteAllAssets(): Promise<void> {
+    await this.expandAssetSection()
+    let count = await this.getUploadedAssetsCount()
+    while (count > 0) {
+      await this.deleteUploadedAsset(0)
+      await this.page.waitForTimeout(500)
+      count = await this.getUploadedAssetsCount()
+    }
+  }
+
+  /**
+   * Check if upload list shows picture-card style (thumbnails)
+   */
+  async isUploadListPictureCardStyle(): Promise<boolean> {
+    const pictureCardList = this.assetSection.locator('.ant-upload-list-picture-card')
+    return await pictureCardList.isVisible().catch(() => false)
+  }
+
+  /**
+   * Check if file thumbnail exists for an uploaded file
+   */
+  async hasFileThumbnail(index: number): Promise<boolean> {
+    const items = this.assetSection.locator('.ant-upload-list-item')
+    const item = items.nth(index)
+    const thumbnail = item.locator('.ant-upload-list-item-thumbnail img, .ant-upload-list-item-thumbnail .anticon')
+    return (await thumbnail.count()) > 0
+  }
+
   // ==================== Style Modal - Additional Fields ====================
 
   /**
