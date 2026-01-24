@@ -3,13 +3,44 @@ import { authFile, app } from '../config'
 import fs from 'fs'
 import { env } from '../env'
 
+const isTokenExpired = (data: { origins?: Array<{ localStorage?: Array<{ name: string; value: string }> }> }): boolean => {
+  if (!data?.origins?.length) {
+    return true
+  }
+
+  for (const origin of data.origins) {
+    const tokenEntry = origin.localStorage?.find((item) => {
+      return item.name.includes('token') || item.name.includes('auth')
+    })
+
+    if (tokenEntry) {
+      try {
+        // Try to parse as JWT and check expiration
+        const payload = JSON.parse(atob(tokenEntry.value.split('.')[1]))
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          return true
+        }
+      } catch {
+        // If not a JWT, fall back to file age check
+        continue
+      }
+    }
+  }
+
+  // Fall back to checking file modification time (expire after 23 hours)
+  const stats = fs.statSync(authFile.hqAdmin)
+  const fileAgeMs = Date.now() - stats.mtimeMs
+  const maxAgeMs = 23 * 60 * 60 * 1000
+  return fileAgeMs > maxAgeMs
+}
+
 setup('authenticate HQ Admin', async ({ page }) => {
   const isFileExists = fs.existsSync(authFile.hqAdmin)
   const data = isFileExists
     ? JSON.parse(fs.readFileSync(authFile.hqAdmin, 'utf8'))
     : null
 
-  if (data && data.origins?.length > 0) {
+  if (data && data.origins?.length > 0 && !isTokenExpired(data)) {
     return
   }
 

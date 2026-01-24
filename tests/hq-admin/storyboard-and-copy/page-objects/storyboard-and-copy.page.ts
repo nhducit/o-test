@@ -469,9 +469,23 @@ export class StoryboardAndCopyPage {
   }
 
   /**
+   * Expand the asset section if it's collapsed
+   */
+  async expandAssetSection(): Promise<void> {
+    const isExpanded = await this.isSectionExpanded('asset')
+    if (!isExpanded) {
+      await this.assetSection.locator('.ant-collapse-header').click()
+      // Wait for animation to complete
+      await this.page.waitForTimeout(300)
+    }
+  }
+
+  /**
    * Upload an asset file
+   * Automatically expands the asset section if collapsed
    */
   async uploadAsset(filePath: string): Promise<void> {
+    await this.expandAssetSection()
     const fileInput = this.assetSection.locator('input[type="file"]')
     await fileInput.setInputFiles(filePath)
   }

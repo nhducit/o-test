@@ -268,19 +268,18 @@ test.describe('Storyboard and Copy Page', () => {
   })
 
   test.describe('Collapse/Expand Sections', () => {
-    test('should have all sections expanded by default', async () => {
-      const sections = [
-        'headline',
-        'sub-headline',
-        'body-copy',
-        'cta-copy',
-        'legal-copy',
-        'asset',
-      ] as const
+    test('should have first 3 sections expanded by default', async () => {
+      const expandedSections = ['headline', 'sub-headline', 'body-copy'] as const
+      const collapsedSections = ['cta-copy', 'legal-copy', 'asset'] as const
 
-      for (const section of sections) {
+      for (const section of expandedSections) {
         const isExpanded = await storyboardPage.isSectionExpanded(section)
         expect(isExpanded).toBe(true)
+      }
+
+      for (const section of collapsedSections) {
+        const isExpanded = await storyboardPage.isSectionExpanded(section)
+        expect(isExpanded).toBe(false)
       }
     })
   })
@@ -329,21 +328,18 @@ test.describe('Storyboard and Copy Page', () => {
       // Create a test image file
       const testImagePath = path.join(__dirname, 'test-assets', 'test-image.png')
 
-      // Check if file input exists
-      const fileInput = page.locator('input[type="file"]')
-      const inputCount = await fileInput.count()
+      // Expand the REFERENCE IMAGES / STYLE GUIDES accordion first
+      await storyboardPage.expandAssetSection()
 
-      if (inputCount > 0) {
-        // Upload the test image
-        await fileInput.setInputFiles(testImagePath)
+      // Upload the test image using the page object method
+      await storyboardPage.uploadAsset(testImagePath)
 
-        // Wait for upload to complete
-        await page.waitForTimeout(2000)
+      // Wait for upload to complete
+      await page.waitForTimeout(2000)
 
-        // Verify Save button is enabled
-        const isEnabled = await storyboardPage.isSaveButtonEnabled()
-        expect(isEnabled).toBe(true)
-      }
+      // Verify Save button is enabled
+      const isEnabled = await storyboardPage.isSaveButtonEnabled()
+      expect(isEnabled).toBe(true)
     })
   })
 
@@ -533,7 +529,8 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
-  test.describe('Campaign Style Settings Modal', () => {
+  // Style configuration feature is hidden - tests skipped
+  test.describe.skip('Campaign Style Settings Modal', () => {
     test('should open Campaign Style Settings modal when clicking Configure Styles', async () => {
       await storyboardPage.clickConfigureStyles()
       await storyboardPage.waitForStyleModal()
@@ -693,7 +690,8 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
-  test.describe('Campaign Preview Style Tests', () => {
+  // Style configuration feature is hidden - tests skipped
+  test.describe.skip('Campaign Preview Style Tests', () => {
     test('switching between portrait and landscape should update the campaign preview', async ({}, testInfo) => {
       // Wait for Configure Styles to be enabled (preview generation complete)
       const isStylesEnabled = await storyboardPage.isConfigureStylesEnabled()
@@ -1206,7 +1204,7 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
-  // Navigation buttons are hidden in R4.2 - tests skipped
+  // Preview carousel skipped - current release only supports 1 preview variant
   test.describe.skip('Preview Carousel Navigation', () => {
     /**
      * Helper to ensure at least 2 headline variants exist for carousel testing
@@ -1377,17 +1375,14 @@ test.describe('Storyboard and Copy Page', () => {
 
   test.describe('Asset Deletion', () => {
     test('should delete an uploaded asset and enable Save button', async ({ page }, testInfo) => {
-      // First upload an asset
+      // First expand the asset section and upload an asset
       const testImagePath = path.join(__dirname, 'test-assets', 'test-image.png')
-      const fileInput = page.locator('input[type="file"]')
-      const inputCount = await fileInput.count()
 
-      if (inputCount === 0) {
-        testInfo.skip(true, 'File input not available')
-        return
-      }
+      // Expand the REFERENCE IMAGES / STYLE GUIDES accordion first
+      await storyboardPage.expandAssetSection()
 
-      await fileInput.setInputFiles(testImagePath)
+      // Upload the test image
+      await storyboardPage.uploadAsset(testImagePath)
 
       // Wait for upload to complete - look for the upload list item
       await page.waitForTimeout(3000)
@@ -1417,7 +1412,8 @@ test.describe('Storyboard and Copy Page', () => {
     })
   })
 
-  test.describe('Style Configuration - Additional Fields', () => {
+  // Style configuration feature is hidden - tests skipped
+  test.describe.skip('Style Configuration - Additional Fields', () => {
     test('should allow editing Left position in a style section', async () => {
       await storyboardPage.clickConfigureStyles()
       await storyboardPage.waitForStyleModal()

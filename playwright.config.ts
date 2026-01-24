@@ -2,9 +2,9 @@ import { defineConfig, devices } from '@playwright/test'
 import { authFile } from './config'
 
 export default defineConfig({
-  timeout: process.env.NODE_ENV === 'development' ? 100000 : 60000,
+  timeout: process.env.NODE_ENV === 'development' ? 60000 : 30000,
   expect: {
-    timeout: 10000,
+    timeout: 5000,
   },
   testDir: './tests',
   fullyParallel: true,
