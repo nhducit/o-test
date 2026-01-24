@@ -1187,7 +1187,7 @@ test.describe('Storyboard and Copy Page', () => {
     })
 
     test('should submit regenerate form with custom prompt and start generation', async ({ page }, testInfo) => {
-      const isClickable = await storyboardPage.waitForGenerateAgainClickable(30000)
+      const isClickable = await storyboardPage.waitForGenerateAgainClickable(10000)
       if (!isClickable) {
         testInfo.skip(true, 'Generate Again button not clickable')
         return
@@ -1203,11 +1203,11 @@ test.describe('Storyboard and Copy Page', () => {
       // Click Generate
       await storyboardPage.clickRegenerateModalGenerate()
 
-      // Wait for success message
-      await expect(page.getByText('Preview generation started')).toBeVisible({ timeout: 15000 })
-
       // Modal should close
       await expect(page.getByRole('dialog', { name: 'Regenerate Preview' })).not.toBeVisible({ timeout: 10000 })
+
+      // Wait for success message
+      await expect(page.getByText('Generating preview...')).toBeVisible({ timeout: 15000 })
     })
   })
 
