@@ -1,2 +1,3 @@
 # This file makes internal-test a standalone workspace root
 packages: []
+ignoreWorkspaceRootCheck: true
