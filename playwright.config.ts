@@ -21,11 +21,22 @@ export default defineConfig({
     { name: 'setup', testMatch: /.*\.setup\.ts$/ },
     {
       name: 'chromium',
+      testIgnore: /tests\/pwa-embed\/.*/,
       use: {
         ...devices['Desktop Chrome'],
         storageState: authFile.hqAdmin,
       },
       dependencies: ['setup'],
+    },
+    {
+      // pwa-player embed E2E tests run iframes inside a local file:// host
+      // page with all backend traffic mocked. They don't need HQ Admin auth
+      // and must not depend on the auth setup project.
+      name: 'pwa-embed',
+      testDir: './tests/pwa-embed',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
     },
   ],
 })

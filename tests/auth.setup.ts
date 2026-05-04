@@ -44,6 +44,12 @@ setup('authenticate HQ Admin', async ({ page }) => {
     return
   }
 
+  if (!env.HQ_ADMIN_AUTH_EMAIL || !env.HQ_ADMIN_AUTH_PASSWORD) {
+    throw new Error(
+      'HQ_ADMIN_AUTH_EMAIL and HQ_ADMIN_AUTH_PASSWORD must be set in .env.local to run HQ Admin tests',
+    )
+  }
+
   await page.goto(`${app.hqAdmin}/login`)
   await page.locator('input[name="email"]').fill(env.HQ_ADMIN_AUTH_EMAIL)
   await page.locator('input[name="password"]').fill(env.HQ_ADMIN_AUTH_PASSWORD)

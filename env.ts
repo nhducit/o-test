@@ -16,15 +16,20 @@ const envSchema = z.object({
   APP_ENV: appEnvEnum.default('local').describe('Application environment (local, dev, staging)'),
   NODE_ENV: z.string().optional().describe('Node environment'),
 
+  // HQ Admin credentials are required by auth.setup.ts (which feeds the
+  // chromium project). Embed E2E tests don't need them, so they're optional
+  // at parse time and asserted at run time inside auth.setup.ts.
   HQ_ADMIN_AUTH_EMAIL: z
     .string()
     .email('HQ_ADMIN_AUTH_EMAIL must be a valid email address')
-    .describe('HQ Admin authentication email'),
+    .optional()
+    .describe('HQ Admin authentication email (required for HQ Admin tests)'),
 
   HQ_ADMIN_AUTH_PASSWORD: z
     .string()
     .min(1, 'HQ_ADMIN_AUTH_PASSWORD is required')
-    .describe('HQ Admin authentication password'),
+    .optional()
+    .describe('HQ Admin authentication password (required for HQ Admin tests)'),
 
   // Optional: Campaign ID for running tests against a specific campaign
   TEST_CAMPAIGN_ID: z

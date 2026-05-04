@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Embed host</title>
+    <style>
+      body { margin: 0; font-family: sans-serif; background: #111; color: #eee; }
+      iframe { display: block; border: 1px solid #444; margin: 8px; }
+      h1 { font-size: 14px; padding: 8px 12px; margin: 0; }
+    </style>
+  </head>
+  <body>
+    <h1 id="status">embed-host: loading…</h1>
+    <script>
+      // Query parameters drive how many iframes to mount and their per-iframe
+      // identifiers. Use comma-separated values keyed by index.
+      //   ?n=3&playerUrl=http://localhost:3008&displays=D1,D2,D3
+      //     &tenants=T1,T2,T3&apiKeys=K1,K2,K3
+      const params = new URLSearchParams(location.search)
+      const n = Math.max(1, parseInt(params.get('n') ?? '1', 10))
+      const playerUrl = params.get('playerUrl') ?? 'http://localhost:3008'
+      const displays = (params.get('displays') ?? 'D1').split(',')
+      const tenants = (params.get('tenants') ?? 'T1').split(',')
+      const apiKeys = (params.get('apiKeys') ?? 'K1').split(',')
+
+      function pick(arr, i) {
+        return arr[i] ?? arr[arr.length - 1]
+      }
+
+      for (let i = 0; i < n; i++) {
+        const iframe = document.createElement('iframe')
+        iframe.id = 'embed-' + i
+        iframe.width = '480'
+        iframe.height = '270'
+        const qs = new URLSearchParams({
+          mode: 'embed',
+          tenantId: pick(tenants, i),
+          displayId: pick(displays, i),
+          apiKey: pick(apiKeys, i),
+        })
+        iframe.src = playerUrl + '/?' + qs.toString()
+        document.body.appendChild(iframe)
+      }
+
+      document.getElementById('status').textContent =
+        'embed-host: ' + n + ' iframe(s) mounted'
+    </script>
+  </body>
+</html>
