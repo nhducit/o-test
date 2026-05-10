@@ -16,12 +16,22 @@
  */
 import type {
   BrowserContext,
+  Frame,
+  Page,
   Request,
   Route,
   WebSocketRoute,
 } from '@playwright/test'
 
 export const MOCK_API_ORIGIN = 'https://api.mock.local'
+
+/** Default pwa-player URL. Override via PWA_PLAYER_URL. */
+export const PWA_PLAYER_URL =
+  process.env.PWA_PLAYER_URL ?? 'http://localhost:3008'
+
+/** UUID v4-ish regex used by webStore.deviceId. */
+export const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 interface RecordedWS {
   url: URL
@@ -327,4 +337,186 @@ export function embedHostPath(): string {
 export function embedHostUrl(params: Record<string, string>): string {
   const qs = new URLSearchParams(params).toString()
   return 'file://' + embedHostPath() + (qs ? '?' + qs : '')
+}
+
+// ---------------------------------------------------------------------------
+// Mode-simulation helpers
+// ---------------------------------------------------------------------------
+
+export interface ChromeRuntimeStubOptions {
+  deviceId?: string
+}
+
+/**
+ * Inject a `window.chrome.runtime` shape sufficient for
+ * `apps/pwa-player/src/utils/chromeExtensions.ts:isChromeRuntimeAvailable()`
+ * to return true, plus a `sendMessage` stub returning canned responses keyed
+ * off the request `action`. Apply BEFORE navigating.
+ *
+ * Without this, `getPlayerMode()` returns `'anonymous'` even when no
+ * `?mode=embed` is present.
+ */
+export async function installChromeRuntime(
+  context: BrowserContext,
+  opts: ChromeRuntimeStubOptions = {},
+): Promise<void> {
+  const deviceId = opts.deviceId ?? 'chromebox-device-stub'
+  await context.addInitScript((injectedDeviceId: string) => {
+    const responses: Record<string, unknown> = {
+      getDeviceId: { deviceId: injectedDeviceId },
+      getDeviceAssetId: { assetId: 'stub-asset-id' },
+      getDeviceSerialNumber: { serialNumber: 'stub-serial' },
+      getNetworkDetails: { networkDetails: { ssid: 'stub-net' } },
+      getDisplayInfo: { displayInfo: [{ id: 'stub' }] },
+      getConfig: { config: {} },
+    }
+    ;(window as unknown as { chrome: unknown }).chrome = {
+      runtime: {
+        sendMessage: (
+          _extensionId: string,
+          message: { action?: string },
+        ): Promise<unknown> =>
+          Promise.resolve(
+            responses[message?.action ?? ''] ?? { ok: true },
+          ),
+      },
+    }
+  }, deviceId)
+}
+
+/**
+ * Spy on `navigator.mediaDevices.getUserMedia`. After install, read the call
+ * count via `await page.evaluate(() => (window as any).__gumCalls)`.
+ */
+export async function installGetUserMediaSpy(
+  context: BrowserContext,
+): Promise<void> {
+  await context.addInitScript(() => {
+    const w = window as unknown as {
+      __gumCalls: number
+      __gumOriginal: unknown
+    }
+    w.__gumCalls = 0
+    if (navigator.mediaDevices?.getUserMedia) {
+      const original =
+        navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)
+      w.__gumOriginal = original
+      navigator.mediaDevices.getUserMedia = (
+        ...args: Parameters<MediaDevices['getUserMedia']>
+      ) => {
+        w.__gumCalls += 1
+        return original(...args)
+      }
+    }
+  })
+}
+
+interface PersistedWebStore {
+  deviceId: string
+  displayId: string
+  storeId: string
+  apiKey: string
+  isRegisteredDevice: boolean
+  [k: string]: unknown
+}
+
+interface ParsedPersisted {
+  key: string
+  value: PersistedWebStore
+}
+
+/**
+ * Wait until the embed sessionStorage key (`webStore-<uuid>`) appears with a
+ * UUID `deviceId`. Returns the persisted record. Throws on timeout.
+ */
+export async function waitForEmbedBoot(
+  scope: Page | Frame,
+  timeoutMs = 10_000,
+): Promise<ParsedPersisted> {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const result = await scope.evaluate(() => {
+      const key = Object.keys(sessionStorage).find((k) =>
+        k.startsWith('webStore-'),
+      )
+      if (!key) return null
+      const raw = sessionStorage.getItem(key)
+      if (!raw) return null
+      try {
+        return { key, value: JSON.parse(raw) as Record<string, unknown> }
+      } catch {
+        return null
+      }
+    })
+    if (
+      result &&
+      typeof result.value.deviceId === 'string' &&
+      /^[0-9a-f-]{36}$/i.test(result.value.deviceId)
+    ) {
+      return result as ParsedPersisted
+    }
+    await new Promise((r) => setTimeout(r, 100))
+  }
+  throw new Error(`waitForEmbedBoot: no webStore-<uuid> after ${timeoutMs}ms`)
+}
+
+/**
+ * Wait until non-embed boot has populated `localStorage.webStore` with a
+ * non-empty `deviceId`. Used for chromebox tests; for anonymous, registration
+ * never completes without a backend, so this will only resolve once the mock
+ * backend's WS sends DEVICE.ASSIGNED — set a generous timeout or skip.
+ */
+export async function waitForNonEmbedBoot(
+  page: Page,
+  timeoutMs = 10_000,
+): Promise<PersistedWebStore> {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const result = await page.evaluate(() => {
+      const raw = localStorage.getItem('webStore')
+      if (!raw) return null
+      try {
+        return JSON.parse(raw) as Record<string, unknown>
+      } catch {
+        return null
+      }
+    })
+    if (result && typeof result.deviceId === 'string' && result.deviceId) {
+      return result as PersistedWebStore
+    }
+    await new Promise((r) => setTimeout(r, 100))
+  }
+  throw new Error(
+    `waitForNonEmbedBoot: localStorage.webStore.deviceId never set after ${timeoutMs}ms`,
+  )
+}
+
+/** Return the names of all open IndexedDB databases for the page's origin. */
+export async function getStoredIDBNames(scope: Page | Frame): Promise<string[]> {
+  return scope.evaluate(async () => {
+    if (typeof indexedDB.databases !== 'function') {
+      return []
+    }
+    const dbs = await indexedDB.databases()
+    return dbs.map((d) => d.name).filter((n): n is string => typeof n === 'string')
+  })
+}
+
+/** Skip the test if pwa-player dev server is unreachable. */
+export async function skipIfPlayerUnreachable(): Promise<string | null> {
+  const { request: pwRequest } = await import('@playwright/test')
+  const ctx = await pwRequest.newContext()
+  try {
+    const res = await ctx.get(PWA_PLAYER_URL, { timeout: 3000 })
+    if (!res.ok()) {
+      return `pwa-player at ${PWA_PLAYER_URL} returned ${res.status()}`
+    }
+    return null
+  } catch (err) {
+    return `pwa-player at ${PWA_PLAYER_URL} unreachable (${
+      (err as Error).message
+    })`
+  } finally {
+    await ctx.dispose()
+  }
 }
